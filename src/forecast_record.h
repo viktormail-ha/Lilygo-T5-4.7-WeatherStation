@@ -16,6 +16,7 @@ typedef struct { // For current Day and Day 1, 2, 3, etc
   float  Low;
   float  Winddir;
   float  Windspeed;
+  float  Windgust;
   float  Rainfall;
   float  Snowfall;
   float  Pressure;
@@ -23,7 +24,8 @@ typedef struct { // For current Day and Day 1, 2, 3, etc
   int    Visibility;
   int    Sunrise;
   int    Sunset;
-  int    FTimezone;  
+  int    FTimezone;
+  int    Id;
 } Forecast_record_type;
 
 #endif /* ifndef FORECAST_RECORD_H_ */

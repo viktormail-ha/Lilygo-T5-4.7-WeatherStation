@@ -4,11 +4,12 @@
 const String TXT_TEMPERATURE_C    = "Temperature (°C)";
 const String TXT_TEMPERATURE_F    = "Temperature (°F)";
 const String TXT_HUMIDITY_PERCENT = "Humidity (%)";
-const String TXT_HILO             = "Hi/Lo";
-const String TXT_FEELSLIKE        = "FL";
+const String TXT_HILO             = "Max|Min: ";
+const String TXT_FEELSLIKE        = "Feels: ";
 
 // Pressure
 const String TXT_PRESSURE_HPA     = "Pressure (hPa)";
+const String TXT_PRESSURE_MM      = "Pressure (mmHg)";
 const String TXT_PRESSURE_IN      = "Pressure (in)";
 
 //RainFall / SnowFall
@@ -16,6 +17,9 @@ const String TXT_RAINFALL_MM = "Rainfall (mm)";
 const String TXT_RAINFALL_IN = "Rainfall (in)";
 const String TXT_SNOWFALL_MM = "Snowfall (mm)";
 const String TXT_SNOWFALL_IN = "Snowfall (in)";
+const String TXT_PRECIP_MM   = "Rain&Snow (mm)";
+const String TXT_PRECIP_IN   = "Rain&Snow (in)";
+const String TXT_NO_PRECIP   = "no Rain no Snow";
 
 //Moon
 const String TXT_MOON_NEW             = "New";

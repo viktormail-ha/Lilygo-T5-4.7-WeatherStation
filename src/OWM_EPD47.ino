@@ -37,7 +37,6 @@ String  Time_str = "--:--:--";
 String  Date_str = "-- --- ----";
 int     wifi_signal, CurrentHour = 0, CurrentMin = 0, CurrentSec = 0, EventCnt = 0, vref = 1100;
 //################ PROGRAM VARIABLES and OBJECTS ##########################################
-#define max_readings 24 // Limited to 3-days here, but could go to 5-days = 40 as the data is issued  
 
 Forecast_record_type  WxConditions[1];
 Forecast_record_type  WxForecast[max_readings];
@@ -48,9 +47,9 @@ float humidity_readings[max_readings]    = {0};
 float rain_readings[max_readings]        = {0};
 float snow_readings[max_readings]        = {0};
 
-long SleepDuration   = 20; // Sleep time in minutes, aligned to the nearest minute boundary, so if 30 will always update at 00 or 30 past the hour
+long SleepDuration   = 30; // Sleep time in minutes, aligned to the nearest minute boundary, so if 30 will always update at 00 or 30 past the hour
 int  WakeupHour      = 6;  // Wakeup after 06:00 to save battery power
-int  SleepHour       = 23; // Sleep  after 23:00 to save battery power
+int  SleepHour       = 3;  // Sleep  after 03:00 to save battery power
 long StartTime       = 0;
 long SleepTimer      = 0;
 long Delta           = 30; // ESP32 rtc speed compensation, prevents display at xx:59:yy and then xx:00:yy (one minute later) to save power
@@ -179,6 +178,10 @@ void Convert_Readings_to_Imperial() { // Only the first 3-hours are used
   WxForecast[0].Snowfall   = mm_to_inches(WxForecast[0].Snowfall);
 }
 
+void Convert_Pressure_to_mmHg() { // Only the first 3-hours are used
+  WxConditions[0].Pressure = hPa_to_mmHg(WxConditions[0].Pressure);
+}
+
 bool DecodeWeather(WiFiClient& json, String Type) {
   Serial.print(F("\nDeserializing json... "));
   auto doc = DynamicJsonDocument(64 * 1024);                     // allocate the JsonDocument
@@ -199,14 +202,16 @@ bool DecodeWeather(WiFiClient& json, String Type) {
     WxConditions[0].Sunset      = root["sys"]["sunset"].as<int>();                 Serial.println("SSet: " + String(WxConditions[0].Sunset));
     WxConditions[0].Temperature = root["main"]["temp"].as<float>();                Serial.println("Temp: " + String(WxConditions[0].Temperature));
     WxConditions[0].FeelsLike   = root["main"]["feels_like"].as<float>();          Serial.println("FLik: " + String(WxConditions[0].FeelsLike));
-    WxConditions[0].Pressure    = root["main"]["pressure"].as<int>();              Serial.println("Pres: " + String(WxConditions[0].Pressure));
+    WxConditions[0].Pressure    = root["main"]["grnd_level"].as<int>();            Serial.println("Pres: " + String(WxConditions[0].Pressure));
     WxConditions[0].Humidity    = root["main"]["humidity"].as<int>();              Serial.println("Humi: " + String(WxConditions[0].Humidity));
     WxConditions[0].Cloudcover  = root["clouds"]["all"].as<int>();                 Serial.println("CCov: " + String(WxConditions[0].Cloudcover));
     WxConditions[0].Visibility  = root["visibility"].as<int>();                    Serial.println("Visi: " + String(WxConditions[0].Visibility));
     WxConditions[0].Windspeed   = root["wind"]["speed"].as<float>();               Serial.println("WSpd: " + String(WxConditions[0].Windspeed));
     WxConditions[0].Winddir     = root["wind"]["deg"].as<float>();                 Serial.println("WDir: " + String(WxConditions[0].Winddir));
+    WxConditions[0].Windgust    = root["wind"]["gust"].as<float>();                Serial.println("WGust: " + String(WxConditions[0].Windgust));
     WxConditions[0].Forecast0   = root["weather"][0]["description"].as<const char*>();      Serial.println("Fore: " + String(WxConditions[0].Forecast0));
     WxConditions[0].Icon        = root["weather"][0]["icon"].as<const char*>();             Serial.println("Icon: " + String(WxConditions[0].Icon));
+    WxConditions[0].Id          = root["weather"][0]["id"].as<int>();              Serial.println("Id: " + String(WxConditions[0].Id));
   }
   if (Type == "forecast") {
     //Serial.println(json);
@@ -218,9 +223,10 @@ bool DecodeWeather(WiFiClient& json, String Type) {
       WxForecast[r].Temperature       = list[r]["main"]["temp"].as<float>();       Serial.println("Temp: " + String(WxForecast[r].Temperature));
       WxForecast[r].Low               = list[r]["main"]["temp_min"].as<float>();   Serial.println("TLow: " + String(WxForecast[r].Low));
       WxForecast[r].High              = list[r]["main"]["temp_max"].as<float>();   Serial.println("THig: " + String(WxForecast[r].High));
-      WxForecast[r].Pressure          = list[r]["main"]["pressure"].as<float>();   Serial.println("Pres: " + String(WxForecast[r].Pressure));
+      WxForecast[r].Pressure          = list[r]["main"]["grnd_level"].as<float>();   Serial.println("Pres: " + String(WxForecast[r].Pressure));
       WxForecast[r].Humidity          = list[r]["main"]["humidity"].as<float>();   Serial.println("Humi: " + String(WxForecast[r].Humidity));
       WxForecast[r].Icon              = list[r]["weather"][0]["icon"].as<const char*>(); Serial.println("Icon: " + String(WxForecast[r].Icon));
+      WxForecast[r].Id                = list[r]["weather"][0]["id"].as<int>();     Serial.println("Id: " + String(WxForecast[r].Id));
       WxForecast[r].Rainfall          = list[r]["rain"]["3h"].as<float>();         Serial.println("Rain: " + String(WxForecast[r].Rainfall));
       WxForecast[r].Snowfall          = list[r]["snow"]["3h"].as<float>();         Serial.println("Snow: " + String(WxForecast[r].Snowfall));
       if (r < 8) { // Check next 3 x 8 Hours = 1 day
@@ -229,7 +235,7 @@ bool DecodeWeather(WiFiClient& json, String Type) {
       }
     }
     //------------------------------------------
-    float pressure_trend = WxForecast[0].Pressure - WxForecast[2].Pressure; // Measure pressure slope between ~now and later
+    float pressure_trend = WxForecast[2].Pressure - WxForecast[0].Pressure; // Measure pressure slope between ~now and later
     pressure_trend = ((int)(pressure_trend * 10)) / 10.0; // Remove any small variations less than 0.1
     WxConditions[0].Trend = "=";
     if (pressure_trend > 0)  WxConditions[0].Trend = "+";
@@ -237,6 +243,8 @@ bool DecodeWeather(WiFiClient& json, String Type) {
     if (pressure_trend == 0) WxConditions[0].Trend = "0";
 
     if (Units == "I") Convert_Readings_to_Imperial();
+
+    if (Units == "R") Convert_Pressure_to_mmHg();
   }
   return true;
 }
@@ -246,7 +254,7 @@ String ConvertUnixTime(int unix_time) {
   time_t tm = unix_time;
   struct tm *now_tm = localtime(&tm);
   char output[40];
-  if (Units == "M") {
+  if (Units == "M" || Units == "R") {
     strftime(output, sizeof(output), "%H:%M %d/%m/%y", now_tm);
   }
   else {
@@ -256,13 +264,12 @@ String ConvertUnixTime(int unix_time) {
 }
 
 bool obtainWeatherData(WiFiClient & client, const String & RequestType) {
-  const String units = (Units == "M" ? "metric" : "imperial");
+  const String units = (Units == "R" || Units == "M" ? "metric" : "imperial");
   const String Version = "2.5";
   client.stop(); // close connection before sending a new request
   HTTPClient http;
-  // Since June 2024, OWM API need v3.0 for the current, and still provide forecast as
-  // awaited on version v2.5
-  //api.openweathermap.org/data/2.5/RequestType?lat={lat}&lon={lon}&appid={API key}
+  // Since June 2024, OWM API need v3.0 for the current, and still provide forecast as awaited on version v2.5
+  // api.openweathermap.org/data/2.5/RequestType?lat={lat}&lon={lon}&appid={API key}
   String uri = "/data/"+Version+"/"+RequestType+"?lat=" + Latitude + "&lon=" + Longitude + "&appid=" + apikey + "&mode=json&units=" + units + "&lang=" + Language;
   Serial.print("Connecting: ");
   Serial.print(server + uri);
@@ -293,6 +300,10 @@ float hPa_to_inHg(float value_hPa) {
   return 0.02953 * value_hPa;
 }
 
+float hPa_to_mmHg(float value_hPa) {
+  return value_hPa * 0.75006;
+}
+
 int JulianDate(int d, int m, int y) {
   int mm, yy, k1, k2, k3, j;
   yy = y - (int)((12 - m) / 10);
@@ -309,7 +320,7 @@ int JulianDate(int d, int m, int y) {
 
 float SumOfPrecip(float DataArray[], int readings) {
   float sum = 0;
-  for (int i = 0; i <= readings; i++) sum += DataArray[i];
+  for (int i = 0; i < readings; i++) sum += DataArray[i];
   return sum;
 }
 
@@ -341,14 +352,15 @@ void DisplayGeneralInfoSection() {
 }
 
 void DisplayWeatherIcon(int x, int y) {
-  DisplayConditionsSection(x, y, WxConditions[0].Icon, LargeIcon);
+  DisplayConditionsSection(x, y - 10, WxConditions[0].Icon, WxConditions[0].Id, LargeIcon);
 }
 
 void DisplayMainWeatherSection(int x, int y) {
   setFont(OpenSans8B);
   DisplayTempHumiPressSection(x, y - 60);
-  DisplayForecastTextSection(x - 55, y + 45);
-  DisplayVisiCCoverSection(x - 10, y + 95);
+//  DisplayForecastTextSection(x - 55, y + 95);
+  DisplayVisiCCoverSection(x, y + 60);
+  DisplayForecastTextSection(SCREEN_WIDTH - 35, y + 95);
 }
 
 void DisplayDisplayWindSection(int x, int y, float angle, float windspeed, int Cradius) {
@@ -383,8 +395,8 @@ void DisplayDisplayWindSection(int x, int y, float angle, float windspeed, int C
   drawString(x, y - 50, WindDegToOrdinalDirection(angle), CENTER);
   setFont(OpenSans24B);
   drawString(x + 3, y - 18, String(windspeed, 1), CENTER);
-  setFont(OpenSans12B);
-  drawString(x, y + 25, (Units == "M" ? "m/s" : "mph"), CENTER);
+  setFont(OpenSans10B);
+  drawString(x, y + 25, (Units == "M" || Units == "R" ? "m/s" : "mph"), CENTER);
 }
 
 String WindDegToOrdinalDirection(float winddirection) {
@@ -409,15 +421,19 @@ String WindDegToOrdinalDirection(float winddirection) {
 
 void DisplayTempHumiPressSection(int x, int y) {
   setFont(OpenSans24B);
-  drawString(x - 30, y, String(WxConditions[0].Temperature, 1) + "°   " + String(WxConditions[0].Humidity, 0) + "%", LEFT);
+  
+  String tempHumi = String(WxConditions[0].Temperature, 1) + "° " + String(WxConditions[0].Humidity, 0) + "%";
+  drawString(x - 30, y, tempHumi, LEFT);
+  int char_width = 16;
+  int text_width = tempHumi.length() * char_width;
+  int pressX = (x - 30) + text_width + 30;
+
+  setFont(OpenSans24B);
+  DrawPressureAndTrend(pressX, y + 15, WxConditions[0].Pressure, WxConditions[0].Trend);
+  
+  int Yoffset = 65;
   setFont(OpenSans12B);
-  DrawPressureAndTrend(x + 215, y + 15, WxConditions[0].Pressure, WxConditions[0].Trend);
-  int Yoffset = 42;
-  if (WxConditions[0].Windspeed > 0) {
-    drawString(x - 30, y + Yoffset, String(WxConditions[0].FeelsLike, 1) + "° "+TXT_FEELSLIKE, LEFT);   // Show FeelsLike temperature if windspeed > 0
-    Yoffset += 30;
-  }
-  drawString(x - 30, y + Yoffset, String(WxConditions[0].High, 0) + "° | " + String(WxConditions[0].Low, 0) + "° " + TXT_HILO, LEFT); // Show forecast high and Low
+  drawString(x - 30, y + Yoffset, TXT_FEELSLIKE + String(WxConditions[0].FeelsLike, 1) + "°   " + TXT_HILO + String(WxConditions[0].High, 0) + "° | " + String(WxConditions[0].Low, 0) + "°", LEFT);
 }
 
 void DisplayForecastTextSection(int x, int y) {
@@ -435,26 +451,67 @@ void DisplayForecastTextSection(int x, int y) {
     p++;
     charCount++;
   }
-  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String((Units == "M" ? "mm" : "in")) + ")";
+  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "M" || Units == "R" ? "mm" : "in") + ")";
   String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
   String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
-  drawString(x + 30, y + 5, TitleCase(Line1), LEFT);
-  if (Line1 != Line2) drawString(x + 30, y + 30, Line2, LEFT);
+  
+  if (Line2.length() > 0 && Line1 != Line2) {
+    drawString(x, y, TitleCase(Line1 + ", " + Line2), RIGHT);
+  } else {
+    drawString(x, y, TitleCase(Line1), RIGHT);
+  }
 }
 
 void DisplayVisiCCoverSection(int x, int y) {
   setFont(OpenSans12B);
-  Serial.print("=========================="); Serial.println(WxConditions[0].Visibility);
-  Visibility(x + 5, y, String(WxConditions[0].Visibility) + "M");
-  CloudCover(x + 155, y, WxConditions[0].Cloudcover);
+
+  int char_width = 12;
+  int space_width = 50;
+  int unitXOffset = 0;
+  if (Units == "I") unitXOffset = 10; 
+  int cursor = x - 15;
+
+  // Visibility
+  String visi;
+  if (Units == "I") {
+      if (WxConditions[0].Visibility == 10000) {
+          visi = "10+ mi";
+      } else {
+          float vis_mi = WxConditions[0].Visibility / 1609.34f;
+          visi = String(vis_mi, 1) + " mi";
+      }
+  } else {
+      if (WxConditions[0].Visibility == 10000) {
+          visi = "10+ km";
+      } else if (WxConditions[0].Visibility < 1000) {
+          visi = String(WxConditions[0].Visibility) + " m";
+      } else {
+          float vis_km = WxConditions[0].Visibility / 1000.0f;
+          visi = String(vis_km, 1) + " km";
+      }
+  }
+  // String visi = String(WxConditions[0].Visibility) + " m" or " km" or " mi";
+  Visibility(cursor, y, visi);
+  cursor += 30 + visi.length() * char_width + space_width - unitXOffset;
+
+  // CloudCover
+  int clouds = WxConditions[0].Cloudcover;
+  String cloud = String(clouds) + "%";
+  if (clouds <= 10) ClearSkyCover(cursor, y, clouds);
+  else if (clouds <= 30) FewCloudsCover(cursor, y, clouds);
+  else if (clouds <= 60) PartlyCloudyCover(cursor, y, clouds);
+  else if (clouds <= 85) MostlyCloudyCover(cursor, y, clouds);
+  else CloudCover(cursor, y, clouds);
+  cursor += 20 + cloud.length() * char_width + space_width;
+  WindGust(cursor, y, WxConditions[0].Windgust);
 }
 
 void DisplayForecastWeather(int x, int y, int index, int fwidth) {
   x = x + fwidth * index;
-  DisplayConditionsSection(x + fwidth / 2 - 5, y + 85, WxForecast[index].Icon, SmallIcon);
+  DisplayConditionsSection(x + fwidth / 2 - 5, y + 85, WxForecast[index].Icon, WxForecast[index].Id, SmallIcon);
   setFont(OpenSans10B);
   drawString(x + fwidth / 2, y + 30, String(ConvertUnixTime(WxForecast[index].Dt + WxConditions[0].FTimezone).substring(0, 5)), CENTER);
-  drawString(x + fwidth / 2, y + 130, String(WxForecast[index].High, 0) + "°/" + String(WxForecast[index].Low, 0) + "°", CENTER);
+  drawString(x + fwidth / 2, y + 130, String((WxForecast[index].High + WxForecast[index].Low) / 2, 0) + "°", CENTER);
 }
 
 double NormalizedMoonPhase(int d, int m, int y) {
@@ -552,7 +609,13 @@ void DisplayForecastSection(int x, int y) {
 void DisplayGraphSection(int x, int y) {
   int r = 0;
   do { // Pre-load temporary arrays with with data - because C parses by reference and remember that[1] has already been converted to I units
-    if (Units == "I") pressure_readings[r] = WxForecast[r].Pressure * 0.02953;   else pressure_readings[r] = WxForecast[r].Pressure;
+    if (Units == "I") {
+        pressure_readings[r] = WxForecast[r].Pressure * 0.02953;      // inHg
+    } else if (Units == "R") {
+        pressure_readings[r] = WxForecast[r].Pressure * 0.75006;      // mmHg
+    } else {
+        pressure_readings[r] = WxForecast[r].Pressure;                // hPa
+    }
     if (Units == "I") rain_readings[r]     = WxForecast[r].Rainfall * 0.0393701; else rain_readings[r]     = WxForecast[r].Rainfall;
     if (Units == "I") snow_readings[r]     = WxForecast[r].Snowfall * 0.0393701; else snow_readings[r]     = WxForecast[r].Snowfall;
     temperature_readings[r]                = WxForecast[r].Temperature;
@@ -564,43 +627,151 @@ void DisplayGraphSection(int x, int y) {
   int gy = (SCREEN_HEIGHT - gheight - 30);
   int gap = gwidth + gx;
   
-  // 1. Temperature
-  DrawGraph(gx + 0 * gap, gy, gwidth, gheight, 10, 30,    Units == "M" ? TXT_TEMPERATURE_C : TXT_TEMPERATURE_F, temperature_readings, max_readings, autoscale_on, barchart_off);
+  bool percip_type_array[max_readings];
+  bool non_negative;
+
+  // 1. Температура
+  DrawGraph(gx + 0 * gap, gy, gwidth, gheight, 10, 30,    Units == "R" || Units == "M" ? TXT_TEMPERATURE_C : TXT_TEMPERATURE_F, temperature_readings, max_readings, autoscale_on, barchart_off, NULL, false);
   
-  // 2. Humidity
-  DrawGraph(gx + 1 * gap, gy, gwidth, gheight, 0, 100,   TXT_HUMIDITY_PERCENT, humidity_readings, max_readings, autoscale_off, barchart_off);
-  
-  // 3. Rain
-  if (SumOfPrecip(rain_readings, max_readings) >= SumOfPrecip(snow_readings, max_readings))
-    DrawGraph(gx + 2 * gap + 5, gy, gwidth, gheight, 0, 30, Units == "M" ? TXT_RAINFALL_MM : TXT_RAINFALL_IN, rain_readings, max_readings, autoscale_on, barchart_on);
-  else
-    DrawGraph(gx + 2 * gap + 5, gy, gwidth, gheight, 0, 30, Units == "M" ? TXT_SNOWFALL_MM : TXT_SNOWFALL_IN, snow_readings, max_readings, autoscale_on, barchart_on);
-  
-  // 4. Air Pressure
-  DrawGraph(gx + 3 * gap, gy, gwidth, gheight, 900, 1050, Units == "M" ? TXT_PRESSURE_HPA : TXT_PRESSURE_IN, pressure_readings, max_readings, autoscale_on, barchart_off);
+  // 2. Влажность
+  DrawGraph(gx + 1 * gap, gy, gwidth, gheight, 0, 100,   TXT_HUMIDITY_PERCENT, humidity_readings, max_readings, autoscale_off, barchart_off, NULL, true);
+
+  // 3. Осадки
+  float precip_readings[max_readings];
+  float sumRain = SumOfPrecip(rain_readings, max_readings);
+  float sumSnow = SumOfPrecip(snow_readings, max_readings);
+  float yMaxSnow = (Units == "R" || Units == "M") ? 30.0f : 2.0f;
+  // 3.1. Осадков нет
+  if (sumRain < 0.001f && sumSnow < 0.001f) {
+      float empty_readings[max_readings];
+      for (int i = 0; i < max_readings; i++) {
+          empty_readings[i] = 0.0f;
+      }
+      DrawGraph(gx + 2 * gap + 5, gy, gwidth, gheight, 0, yMaxSnow,
+                TXT_NO_PRECIP,
+                empty_readings, max_readings, autoscale_on, barchart_on, NULL, true);
+  }
+  // 3.2. Только дождь
+  else if (sumRain >= 0.001f && sumSnow < 0.001f) {
+      DrawGraph(gx + 2 * gap + 5, gy, gwidth, gheight, 0, yMaxSnow,
+                Units == "R" || Units == "M" ? TXT_RAINFALL_MM : TXT_RAINFALL_IN,
+                rain_readings, max_readings, autoscale_on, barchart_on, NULL, true);
+  }
+  // 3.3. Только снег
+  else if (sumSnow >= 0.001f && sumRain < 0.001f) {
+      DrawGraph(gx + 2 * gap + 5, gy, gwidth, gheight, 0, yMaxSnow,
+                Units == "R" || Units == "M" ? TXT_SNOWFALL_MM : TXT_SNOWFALL_IN,
+                snow_readings, max_readings, autoscale_on, barchart_on, NULL, true);
+  }
+  // 3.4. Есть и дождь и снег
+  else {
+      for (int i = 0; i < max_readings; i++) {
+          if (snow_readings[i] > 0.0f) {
+              precip_readings[i] = snow_readings[i];
+              percip_type_array[i] = false;  // снег - серый бар
+          } else {
+              precip_readings[i] = rain_readings[i];
+              percip_type_array[i] = true;   // дождь - черный бар
+          }
+      }
+      DrawGraph(gx + 2 * gap + 5, gy, gwidth, gheight, 0, yMaxSnow,
+                Units == "R" || Units == "M" ? TXT_PRECIP_MM : TXT_PRECIP_IN,
+                precip_readings, max_readings, autoscale_on, barchart_on, percip_type_array, true);
+  }
+
+  // 4. Давление
+  DrawGraph(gx + 3 * gap, gy, gwidth, gheight, 
+          Units == "R" ? 650 : (Units == "M" ? 900 : 950), 
+          Units == "R" ? 850 : (Units == "M" ? 1050 : 1050), 
+          Units == "R" ? TXT_PRESSURE_MM : (Units == "M" ? TXT_PRESSURE_HPA : TXT_PRESSURE_IN), 
+          pressure_readings, max_readings, autoscale_on, barchart_off, NULL, false);
 }
 
-void DisplayConditionsSection(int x, int y, String IconName, bool IconSize) {
+/*
+Доступные иконки Openweathermap:
+Иконка      ID                  Значение                                Расшифровка
+01d / 01n   800                 Clear sky                               800 clear sky (ясное небо)
+02d / 02n   801                 Few clouds                              801 few clowds (небольшая облачность)
+03d / 03n   802                 Scattered clouds                        802 scattered clouds (облачно с прояснениями)
+04d / 04n   803–804             Broken / Overcast clouds                803 broken clouds (облачно), 804 overcast clouds (сплошная облачность)
+09d / 09n   300–321             Drizzle (морось)                        300 light intensity drizzle, 301 drizzle, 302 heavy intensity drizzle, 
+                                                                        310	light intensity drizzle rain, 311	drizzle rain, 312	heavy intensity drizzle rain, 
+                                                                        313 shower rain and drizzle, 314 heavy shower rain and drizzle, 321 shower drizzle
+            520–531             Shower rain (ливневый дождь)            520 light intensity shower rain, 521 shower rain, 
+                                                                        522 heavy intensity shower rain, 531 ragged shower rain
+10d / 10n   500–504             Rain (дождь)                            500 light rain, 501 moderate rain, 502 heavy intensity rain, 503 very heavy rain, 504 extreme rain
+            511                 Freezing rain (ледяной дождь)           511 freezing rain
+11d / 11n   200–232             Thunderstorm (гроза)                    200 thunderstorm with light rain, 201 thunderstorm with rain, 202 thunderstorm with heavy rain, 
+                                                                        210 light thunderstorm, 211 thunderstorm, 212 heavy thunderstorm, 221 ragged thunderstorm, 
+                                                                        230 thunderstorm with light drizzle, 231 thunderstorm with drizzle, 232 thunderstorm with heavy drizzle
+13d / 13n   600–622             Snow + sleet (крупа) + rain/snow        600 light snow, 601 snow, 602 heavy snow, 611 sleet, 612 light shower sleet, 613 shower sleet, 
+                                                                        615 light rain and snow, 616 rain and snow, 620 light shower snow, 621 shower snow, 622 heavy shower snow
+50d / 50n   701–781             Mist, fog, haze, dust, sand, etc.       701 mist (дымка), 711 smoke (дым), 721 haze (мгла), 731 sand/dust whirls, 741 fog (туман), 
+                                                                        751 sand (песок), 761 dust (пыль), 762 volcanic ash, 771 squalls (шквалы), 781 tornado (торнадо)
+*/
+
+void DisplayConditionsSection(int x, int y, String IconName, int Id, bool IconSize) {
   Serial.println("Icon name: " + IconName);
-  if      (IconName == "01d" || IconName == "01n") ClearSky(x, y, IconSize, IconName);
-  else if (IconName == "02d" || IconName == "02n") FewClouds(x, y, IconSize, IconName);
-  else if (IconName == "03d" || IconName == "03n") ScatteredClouds(x, y, IconSize, IconName);
-  else if (IconName == "04d" || IconName == "04n") BrokenClouds(x, y, IconSize, IconName);
-  else if (IconName == "09d" || IconName == "09n") ChanceRain(x, y, IconSize, IconName);
-  else if (IconName == "10d" || IconName == "10n") Rain(x, y, IconSize, IconName);
-  else if (IconName == "11d" || IconName == "11n") Thunderstorms(x, y, IconSize, IconName);
-  else if (IconName == "13d" || IconName == "13n") Snow(x, y, IconSize, IconName);
-  else if (IconName == "50d" || IconName == "50n") Mist(x, y, IconSize, IconName);
-  else                                             Nodata(x, y, IconSize, IconName);
+  // y -= 5;
+  if      (IconName == "01d" || IconName == "01n") ClearSky(x, y, IconSize, IconName);              // ясное небо
+  else if (IconName == "02d" || IconName == "02n") FewClouds(x, y, IconSize, IconName);             // небольшая облачность
+  else if (IconName == "03d" || IconName == "03n") ScatteredClouds(x, y, IconSize, IconName);       // облачно с прояснениями (большое облако с маленьким солнцем)
+  else if (IconName == "04d" || IconName == "04n") {
+      if (Id == 804)
+          OvercastClouds(x, y, IconSize, IconName);                                                 // сплошная облачность (большое облако и два маленьких облака)
+      else
+          BrokenClouds(x, y, IconSize, IconName);                                                   // облачно (большое облако с маленьким облаком)
+  }
+  else if (IconName == "09d" || IconName == "09n" || IconName == "10d" || IconName == "10n") {
+      if (Id == 300 || Id == 310)
+          LightDrizzle(x, y, IconSize, IconName);                                                   // light drizzle (лёгкая морось)
+      else if (Id == 301 || Id == 311 || Id == 313 || Id == 321)
+          Drizzle(x, y, IconSize, IconName);                                                        // drizzle (морось)
+      else if (Id == 302 || Id == 314)
+          HeavyDrizzle(x, y, IconSize, IconName);                                                   // heavy drizzle (сильная морось)
+      else if (Id == 500 || Id == 520)
+          LightRain(x, y, IconSize, IconName);                                                      // лёгкий дождь
+      else if (Id == 502 || Id == 503 || Id == 504 || Id == 522 || Id == 531)
+          HeavyRain(x, y, IconSize, IconName);                                                      // сильный дождь
+      else
+          Rain(x, y, IconSize, IconName);                                                           // прочий дождь (Moderate (умеренный) + freezing (ледяной) + 521)
+  }
+  else if (IconName == "11d" || IconName == "11n") {
+      if (Id == 200 || Id == 210)
+          LightThunderstorms(x, y, IconSize, IconName);                                             // thunderstorm with light rain, light thunderstorm
+      else if (Id == 202 || Id == 212)
+          HeavyThunderstorms(x, y, IconSize, IconName);                                             // thunderstorm with heavy rain, heavy thunderstorm
+      else
+          Thunderstorms(x, y, IconSize, IconName);                                                  // прочая гроза
+  }
+  else if (IconName == "13d" || IconName == "13n") {
+      if (Id == 600 || Id == 620)
+          LightSnow(x, y, IconSize, IconName);                                                      // лёгкий снег
+      else if (Id == 602 || Id == 622)
+          HeavySnow(x, y, IconSize, IconName);                                                      // сильный снег
+      else if (Id == 615 || Id == 616)
+          RainSnow(x, y, IconSize, IconName);                                                       // снег с дождем
+      else
+          Snow(x, y, IconSize, IconName);                                                           // прочий снег
+  }
+  else if (IconName == "50d" || IconName == "50n") {
+      if (Id == 771 || Id == 781)
+          Tornado(x, y, IconSize, IconName);                                                        // шквалы, торнадо
+      else
+          Mist(x, y, IconSize, IconName);                                                           // дымка, мгла, туман, пыль, песок
+  }
+  else    Nodata(x, y, IconSize, IconName);
 }
 
 void arrow(int x, int y, int asize, float aangle, int pwidth, int plength) {
-  float dx = (asize - 10) * cos((aangle - 90) * PI / 180) + x; // calculate X position
-  float dy = (asize - 10) * sin((aangle - 90) * PI / 180) + y; // calculate Y position
+  // Позиция стрелки на окружности
+  float dx = (asize + plength - 5) * cos((aangle - 90) * PI / 180) + x; // calculate X position
+  float dy = (asize + plength - 5) * sin((aangle - 90) * PI / 180) + y; // calculate Y position
   float x1 = 0;         float y1 = plength;
   float x2 = pwidth / 2;  float y2 = pwidth / 2;
   float x3 = -pwidth / 2; float y3 = pwidth / 2;
-  float angle = aangle * PI / 180 - 135;
+  // Направление треугольника
+  float angle = (aangle + 180 - 4) * PI / 180 - 135;
   float xx1 = x1 * cos(angle) - y1 * sin(angle) + dx;
   float yy1 = y1 * cos(angle) + x1 * sin(angle) + dy;
   float xx2 = x2 * cos(angle) - y2 * sin(angle) + dx;
@@ -616,19 +787,38 @@ void DrawSegment(int x, int y, int o1, int o2, int o3, int o4, int o11, int o12,
 }
 
 void DrawPressureAndTrend(int x, int y, float pressure, String slope) {
-  drawString(x + 25, y - 10, String(pressure, (Units == "M" ? 0 : 1)) + (Units == "M" ? "hPa" : "in"), LEFT);
-  if      (slope == "+") {
-    DrawSegment(x, y, 0, 0, 8, -8, 8, -8, 16, 0);
-    DrawSegment(x - 1, y, 0, 0, 8, -8, 8, -8, 16, 0);
-  }
-  else if (slope == "0") {
-    DrawSegment(x, y, 8, -8, 16, 0, 8, 8, 16, 0);
-    DrawSegment(x - 1, y, 8, -8, 16, 0, 8, 8, 16, 0);
-  }
-  else if (slope == "-") {
-    DrawSegment(x, y, 0, 0, 8, 8, 8, 8, 16, 0);
-    DrawSegment(x - 1, y, 0, 0, 8, 8, 8, 8, 16, 0);
-  }
+  // --- Давление ---
+  setFont(OpenSans24B);
+  String pressureStr = String(pressure, (Units == "R" || Units == "M" ? 0 : 1));
+  drawString(x + 80, y - 15, pressureStr, LEFT);
+  // Примерный расчёт ширины
+  int char_width = 22;
+  int text_width = pressureStr.length() * char_width;
+  // --- Единицы ---
+  setFont(OpenSans8B);
+  String unitStr =
+      Units == "R" ? "mmHg" :
+      Units == "M" ? "hPa"  :
+                     "inHg";
+  int unitYOffset = 0;
+  if (Units == "M") unitYOffset = 5; 
+  int unitXOffset = 30;
+  if (Units == "I") unitXOffset = 20; 
+  drawString(x + 80 + text_width + unitXOffset, y + 5 + unitYOffset, unitStr, LEFT);
+  // --- Тренд (утолщённый) ---
+  for (int i = 0; i < 2; i++)
+    for (int j = 0; j < 2; j++) {
+      if (slope == "+")
+        DrawSegment(x + 55 - i, y + j, 0, 0, 8, -8, 8, -8, 16, 0);
+      else if (slope == "0")
+        DrawSegment(x + 55 - i, y + j, 8, -8, 16, 0, 8, 8, 16, 0);
+      else if (slope == "-")
+        DrawSegment(x + 55 - i, y + j, 0, 0, 8, 8, 8, 8, 16, 0);
+    }
+}
+
+void DrawPressureMeasure(int x, int y, float pressure, String slope) {
+  drawString(x + 60, y + 20, (Units == "R" ? " mmHg" : (Units == "M" ? " hPa" : " inHg")), LEFT);
 }
 
 void DisplayStatusSection(int x, int y, int rssi) {
@@ -668,16 +858,16 @@ boolean UpdateLocalTime() {
   CurrentMin  = timeinfo.tm_min;
   CurrentSec  = timeinfo.tm_sec;
   //See http://www.cplusplus.com/reference/ctime/strftime/
-  Serial.println(&timeinfo, "%a %b %d %Y   %H:%M:%S");      // Displays: Saturday, June 24 2017 14:05:49
-  if (Units == "M") {
+  Serial.println(&timeinfo, "%a %b %d %Y   %H:%M");      // Displays: Saturday, June 24 2017 14:05
+  if (Units == "M" || Units == "R") {
     sprintf(day_output, "%s, %02u %s %04u", weekday_D[timeinfo.tm_wday], timeinfo.tm_mday, month_M[timeinfo.tm_mon], (timeinfo.tm_year) + 1900);
-    strftime(update_time, sizeof(update_time), "%H:%M:%S", &timeinfo);  // Creates: '@ 14:05:49'   and change from 30 to 8 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    strftime(update_time, sizeof(update_time), "%H:%M", &timeinfo);  // Creates: '@ 14:05'   and change from 30 to 8 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     sprintf(time_output, "%s", update_time);
   }
   else
   {
     strftime(day_output, sizeof(day_output), "%a %b-%d-%Y", &timeinfo); // Creates  'Sat May-31-2019'
-    strftime(update_time, sizeof(update_time), "%r", &timeinfo);        // Creates: '@ 02:05:49pm'
+    strftime(update_time, sizeof(update_time), "%r", &timeinfo);        // Creates: '@ 02:05pm'
     sprintf(time_output, "%s", update_time);
   }
   Date_str = day_output;
@@ -706,7 +896,6 @@ void DrawBattery(int x, int y) {
   }
 }
 
-
 // ######################################## Weather Symbol ########################################
 // Symbols are drawn on a relative 10x10grid and 1 scale unit = 1 drawing unit
 void addcloud(int x, int y, int scale, int linesize) {
@@ -722,19 +911,115 @@ void addcloud(int x, int y, int scale, int linesize) {
   fillRect(x - scale * 3 + 2, y - scale + linesize - 1, scale * 5.9, scale * 2 - linesize * 2 + 2, White); // Upper and lower lines
 }
 
-void addrain(int x, int y, int scale, bool IconSize) {
+void addlightdrizzle(int x, int y, int scale, bool IconSize) {
   if (IconSize == SmallIcon) {
     setFont(OpenSans8B);
-    drawString(x - 25, y + 12, "///////", LEFT);
+    drawString(x - 15, y + 12, ",'  ,'", LEFT);
   }
   else
   {
     setFont(OpenSans18B);
-    drawString(x - 60, y + 25, "///////", LEFT);
+    drawString(x - 30, y + 25, ".'  .'", LEFT);
+  }
+}
+
+void adddrizzle(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 20, y + 12, ".' .' .'", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 38, y + 25, ",' ,' ,'", LEFT);
+  }
+}
+
+void addheavydrizzle(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 20, y + 12, ".'.'.'.'", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 40, y + 25, ".'.'.'.'", LEFT);
+  }
+}
+
+void addlightrain(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 15, y + 12, "/   /", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 30, y + 25, "/   /", LEFT);
+  }
+}
+
+void addrain(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 15, y + 12, "/ / /", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 30, y + 25, "/ / /", LEFT);
+  }
+}
+
+void addheavyrain(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 20, y + 12, "/ / / /", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 40, y + 25, "/ / / /", LEFT);
+  }
+}
+
+void addrainsnow(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 30, y + 15, "* / * / *", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 60, y + 30, "* / * / *", LEFT);
+  }
+}
+
+void addlightsnow(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 15, y + 15, "*   *", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 35, y + 30, "*   *", LEFT);
   }
 }
 
 void addsnow(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    setFont(OpenSans8B);
+    drawString(x - 20, y + 15, "*  *  *", LEFT);
+  }
+  else
+  {
+    setFont(OpenSans18B);
+    drawString(x - 45, y + 30, "*  *  *", LEFT);
+  }
+}
+
+void addheavysnow(int x, int y, int scale, bool IconSize) {
   if (IconSize == SmallIcon) {
     setFont(OpenSans8B);
     drawString(x - 25, y + 15, "* * * *", LEFT);
@@ -746,7 +1031,47 @@ void addsnow(int x, int y, int scale, bool IconSize) {
   }
 }
 
-void addtstorm(int x, int y, int scale) {
+void addlighttstorm(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    x += 10;
+  } else {
+    x += 30;
+  }
+  y = y + scale / 2;
+  for (int i = 1; i < 3; i++) {
+    drawLine(x - scale * 4 + scale * i * 1.5 + 0, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 0, y + scale, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5 + 1, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 1, y + scale, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5 + 2, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 2, y + scale, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5, y + scale * 1.5 + 0, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5 + 0, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5, y + scale * 1.5 + 1, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5 + 1, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5, y + scale * 1.5 + 2, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5 + 2, Black);
+    drawLine(x - scale * 3.5 + scale * i * 1.4 + 0, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5, Black);
+    drawLine(x - scale * 3.5 + scale * i * 1.4 + 1, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 1, y + scale * 1.5, Black);
+    drawLine(x - scale * 3.5 + scale * i * 1.4 + 2, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 2, y + scale * 1.5, Black);
+  }
+}
+
+void addtstorm(int x, int y, int scale, bool IconSize) {
+  if (IconSize == SmallIcon) {
+    x += 5;
+  } else {
+    x += 15;
+  }
+  y = y + scale / 2;
+  for (int i = 1; i < 4; i++) {
+    drawLine(x - scale * 4 + scale * i * 1.5 + 0, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 0, y + scale, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5 + 1, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 1, y + scale, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5 + 2, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 2, y + scale, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5, y + scale * 1.5 + 0, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5 + 0, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5, y + scale * 1.5 + 1, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5 + 1, Black);
+    drawLine(x - scale * 4 + scale * i * 1.5, y + scale * 1.5 + 2, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5 + 2, Black);
+    drawLine(x - scale * 3.5 + scale * i * 1.4 + 0, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5, Black);
+    drawLine(x - scale * 3.5 + scale * i * 1.4 + 1, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 1, y + scale * 1.5, Black);
+    drawLine(x - scale * 3.5 + scale * i * 1.4 + 2, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 2, y + scale * 1.5, Black);
+  }
+}
+
+void addheavytstorm(int x, int y, int scale) {
   y = y + scale / 2;
   for (int i = 1; i < 5; i++) {
     drawLine(x - scale * 4 + scale * i * 1.5 + 0, y + scale * 1.5, x - scale * 3.5 + scale * i * 1.5 + 0, y + scale, Black);
@@ -758,6 +1083,72 @@ void addtstorm(int x, int y, int scale) {
     drawLine(x - scale * 3.5 + scale * i * 1.4 + 0, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 0, y + scale * 1.5, Black);
     drawLine(x - scale * 3.5 + scale * i * 1.4 + 1, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 1, y + scale * 1.5, Black);
     drawLine(x - scale * 3.5 + scale * i * 1.4 + 2, y + scale * 2.5, x - scale * 3 + scale * i * 1.5 + 2, y + scale * 1.5, Black);
+  }
+}
+
+void addwind(int x, int y, float scale, float gust_ms) {
+  // if (IconSize == SmallIcon) linesize = 3;
+  auto fatLine = [&](int x0, int y0, int x1, int y1) {
+    drawLine(x0, y0,     x1, y1,     Black);
+    drawLine(x0, y0 + 1, x1, y1 + 1, Black);
+    drawLine(x0, y0 - 1, x1, y1 - 1, Black);
+  };
+  // === Определяем сколько базовых волн рисовать ===
+  int waveCount = 3;       // обычно 3
+  if (gust_ms < 5.0)          waveCount = 2; // слабый ветер
+  else if (gust_ms < 10.0)    waveCount = 3; // средний ветер
+  else                        waveCount = 4; // сильный ветер
+  
+  // === Базовые волны ===
+  for (int i = 0; i < waveCount; i++) {
+    float offset_y = i * scale * 1.15;
+    float len      = scale * (3.4 + i * 0.6);
+    fatLine(x, y + offset_y, x + len * 0.55, y + offset_y - scale * 0.4);
+    fatLine(x + len * 0.55, y + offset_y - scale * 0.4, x + len * 0.82, y + offset_y + scale * 0.35);
+    fatLine(x + len * 0.82, y + offset_y + scale * 0.35, x + len, y + offset_y - scale * 0.25);
+  }
+  // === Ветер >= 15 м/с - Верхний всплеск ===
+  if (gust_ms >= 15.0) {
+    fatLine(x + scale * 2.8, y - scale * 1.1, x + scale * 4.2, y - scale * 2.2);
+    fatLine(x + scale * 4.0, y - scale * 2.0, x + scale * 4.8, y - scale * 1.4);
+  }
+  // // === Ветер >= 20 м/с — ещё верхний акцент и нижний порыв ===
+  // if (gust_ms >= 20.0) {
+  //   fatLine(x + scale * 0.8, y - scale * 0.3, x + scale * 2.4, y - scale * 1.8);
+  //   fatLine(x + scale * 1.8, y + scale * 3.4, x + scale * 3.5, y + scale * 5.0);
+  //   fatLine(x + scale * 3.3, y + scale * 4.7, x + scale * 4.6, y + scale * 3.9);
+  // }
+}
+
+void addcoversun(int x, int y, int scale) {
+  int circleThickness = 2;        // толщина круга
+  int rayThickness    = 3;        // толщина лучей
+  float rayGap        = scale * 0.25;
+  float rayLength     = scale * 0.55;
+  int inner = scale + rayGap;
+  int outer = inner + rayLength;
+  // ----- КРУГ (контурный) -----
+  for (int i = 0; i < circleThickness; i++)
+      drawCircle(x, y, scale - i, Black);
+  // ----- ВЕРТИКАЛЬНЫЕ ЛУЧИ -----
+  fillRect(x - rayThickness/2, y - outer, rayThickness, outer - inner, Black);
+  fillRect(x - rayThickness/2, y + inner, rayThickness, outer - inner, Black);
+  // ----- ГОРИЗОНТАЛЬНЫЕ ЛУЧИ -----
+  fillRect(x - outer, y - rayThickness/2, outer - inner, rayThickness, Black);
+  fillRect(x + inner, y - rayThickness/2, outer - inner, rayThickness, Black);
+  // ----- ДИАГОНАЛИ (через маленькие квадраты) -----
+  int steps = rayLength;   // сколько "точек" рисовать
+  for (int i = 0; i < steps; i++) {
+    int dx = inner + i;
+    int dy = inner + i;
+    // ↘
+    fillRect(x + dx - rayThickness/2, y + dy - rayThickness/2, rayThickness, rayThickness, Black);
+    // ↗
+    fillRect(x + dx - rayThickness/2, y - dy - rayThickness/2, rayThickness, rayThickness, Black);
+    // ↙
+    fillRect(x - dx - rayThickness/2, y + dy - rayThickness/2, rayThickness, rayThickness, Black);
+    // ↖
+    fillRect(x - dx - rayThickness/2, y - dy - rayThickness/2, rayThickness, rayThickness, Black);
   }
 }
 
@@ -781,6 +1172,26 @@ void addfog(int x, int y, int scale, int linesize, bool IconSize) {
   }
 }
 
+void addtornado(int x, int y, int scale, bool IconSize) {
+    x -= 20;
+    int dy = 15;
+    if (IconSize == LargeIcon) dy = 30;
+    if (IconSize == LargeIcon) x -= 10;
+    auto fatLine = [&](int x0, int y0, int x1, int y1) {
+        drawLine(x0, y0, x1, y1, Black);
+        drawLine(x0, y0 + 1, x1, y1 + 1, Black);
+        drawLine(x0, y0 - 1, x1, y1 - 1, Black);
+    };
+    int levels = 4;                                                         // количество горизонтальных волн конуса
+    for (int i = 0; i < levels; i++) {
+        float len = scale * (4.0 - i);
+        float offset_y = i * scale * 0.6 + dy;
+        float mid_x = x + len / 2.0;
+        fatLine(x, y + offset_y, mid_x, y + offset_y - scale * 0.3);        // левая часть волны
+        fatLine(mid_x, y + offset_y - scale * 0.3, x + len, y + offset_y);  // правая часть волны
+    }
+}
+
 void DrawAngledLine(int x, int y, int x1, int y1, int size, int color) {
   int dx = (size / 2.0) * (x - x1) / sqrt(sq(x - x1) + sq(y - y1));
   int dy = (size / 2.0) * (y - y1) / sqrt(sq(x - x1) + sq(y - y1));
@@ -796,50 +1207,104 @@ void ClearSky(int x, int y, bool IconSize, String IconName) {
   addsun(x, y, scale * (IconSize ? 1.7 : 1.2), IconSize);
 }
 
-void BrokenClouds(int x, int y, bool IconSize, String IconName) {
-  int scale = Small, linesize = 5;
-  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
-  y += 15;
-  if (IconSize == LargeIcon) scale = Large;
-  addsun(x - scale * 1.8, y - scale * 1.8, scale, IconSize);
-  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
-}
-
 void FewClouds(int x, int y, bool IconSize, String IconName) {
   int scale = Small, linesize = 5;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
-  y += 15;
+  y += 10;
   if (IconSize == LargeIcon) scale = Large;
-  addcloud(x + (IconSize ? 10 : 0), y, scale * (IconSize ? 0.9 : 0.8), linesize);
-  addsun((x + (IconSize ? 10 : 0)) - scale * 1.8, y - scale * 1.6, scale, IconSize);
+  addcloud(x + (IconSize ? 20 : 0) - scale * 1.8, y - scale * 1.6, scale * (IconSize ? 0.7 : 0.6), linesize);
+  addsun((x + (IconSize ? 20 : 0)), y, scale * (IconSize ? 1.3 : 1), IconSize);
 }
 
 void ScatteredClouds(int x, int y, bool IconSize, String IconName) {
   int scale = Small, linesize = 5;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
-  y += 15;
+  y += 10;
   if (IconSize == LargeIcon) scale = Large;
-  addcloud(x - (IconSize ? 35 : 0), y * (IconSize ? 0.75 : 0.93), scale / 2, linesize); // Cloud top left
-  addcloud(x, y, scale * 0.9, linesize);                                         // Main cloud
+  addsun(x - scale * 1.8, y - scale * 1.8, scale, IconSize);
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+}
+
+void BrokenClouds(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  y += 10;
+  if (IconSize == LargeIcon) scale = Large;
+  addcloud(x - (IconSize ? 35 : 15), y * (IconSize ? 0.75 : 0.93), scale * (IconSize ? 0.7 : 0.6), linesize); // Cloud top left
+  addcloud(x, y, scale * 0.75, linesize);                                                                     // Main cloud
+}
+
+void OvercastClouds(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  y += 10;
+  if (IconSize == LargeIcon) scale = Large;
+  addcloud(x - (IconSize ? 35 : 15), y * (IconSize ? 0.75 : 0.93), scale * (IconSize ? 0.7 : 0.6), linesize); // Cloud top left
+  addcloud(x + (IconSize ? 35 : 5), y * (IconSize ? 0.75 : 0.95), scale * (IconSize ? 0.7 : 0.6), linesize);  // Cloud top right
+  addcloud(x, y, scale * 0.75, linesize);                                                                     // Main cloud
+}
+
+void LightDrizzle(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addlightdrizzle(x, y, scale, IconSize);
+}
+
+void Drizzle(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  adddrizzle(x, y, scale, IconSize);
+}
+
+void HeavyDrizzle(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addheavydrizzle(x, y, scale, IconSize);
+}
+
+void LightRain(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addlightrain(x, y, scale, IconSize);
 }
 
 void Rain(int x, int y, bool IconSize, String IconName) {
   int scale = Small, linesize = 5;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
-  y += 15;
+  y += 10;
   if (IconSize == LargeIcon) scale = Large;
   addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
   addrain(x, y, scale, IconSize);
 }
 
-void ChanceRain(int x, int y, bool IconSize, String IconName) {
+void HeavyRain(int x, int y, bool IconSize, String IconName) {
   int scale = Small, linesize = 5;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
   if (IconSize == LargeIcon) scale = Large;
-  y += 15;
-  addsun(x - scale * 1.8, y - scale * 1.8, scale, IconSize);
-  addcloud(x, y, scale * (IconSize ? 1 : 0.65), linesize);
-  addrain(x, y, scale, IconSize);
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addheavyrain(x, y, scale, IconSize);
+}
+
+void LightThunderstorms(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 5;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addlighttstorm(x, y, scale, IconSize);
 }
 
 void Thunderstorms(int x, int y, bool IconSize, String IconName) {
@@ -848,15 +1313,61 @@ void Thunderstorms(int x, int y, bool IconSize, String IconName) {
   if (IconSize == LargeIcon) scale = Large;
   y += 5;
   addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
-  addtstorm(x, y, scale);
+  addtstorm(x, y, scale, IconSize);
+}
+
+void Tornado(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 5;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addtornado(x, y, scale, IconSize);
+}
+
+void HeavyThunderstorms(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 5;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addheavytstorm(x, y, scale);
+}
+
+void RainSnow(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addrainsnow(x, y, scale, IconSize);
+}
+
+void LightSnow(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addlightsnow(x, y, scale, IconSize);
 }
 
 void Snow(int x, int y, bool IconSize, String IconName) {
   int scale = Small, linesize = 5;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
   if (IconSize == LargeIcon) scale = Large;
+  y += 10;
   addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
   addsnow(x, y, scale, IconSize);
+}
+
+void HeavySnow(int x, int y, bool IconSize, String IconName) {
+  int scale = Small, linesize = 5;
+  if (IconName.endsWith("n")) addmoon(x, y, IconSize);
+  if (IconSize == LargeIcon) scale = Large;
+  y += 10;
+  addcloud(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addheavysnow(x, y, scale, IconSize);
 }
 
 void Mist(int x, int y, bool IconSize, String IconName) {
@@ -867,11 +1378,42 @@ void Mist(int x, int y, bool IconSize, String IconName) {
   addfog(x, y, scale, linesize, IconSize);
 }
 
+void ClearSkyCover(int x, int y, int CloudCover) {
+  addcoversun(x, y + 5, Small); // Main sun
+  drawString(x + 30, y, String(CloudCover) + "%", LEFT);
+}
+
+void FewCloudsCover(int x, int y, int CloudCover) {
+  addcloud(x - 15, y, Small * 0.4, 2); // Cloud top left
+  addcoversun(x, y + 5, Small); // Main sun
+  drawString(x + 30, y, String(CloudCover) + "%", LEFT);
+}
+
+void PartlyCloudyCover(int x, int y, int CloudCover) {
+  addcoversun(x - 9, y, Small * 0.7); // Sun top left
+  addcloud(x, y + 15, Small * 0.6, 2); // Main cloud
+  drawString(x + 30, y, String(CloudCover) + "%", LEFT);
+}
+
+void MostlyCloudyCover(int x, int y, int CloudCover) {
+  addcloud(x - 9, y,     Small * 0.3, 2); // Cloud top left
+  addcloud(x, y + 15,    Small * 0.6, 2); // Main cloud
+  drawString(x + 30, y, String(CloudCover) + "%", LEFT);
+}
+
 void CloudCover(int x, int y, int CloudCover) {
   addcloud(x - 9, y,     Small * 0.3, 2); // Cloud top left
   addcloud(x + 3, y - 2, Small * 0.3, 2); // Cloud top right
   addcloud(x, y + 15,    Small * 0.6, 2); // Main cloud
   drawString(x + 30, y, String(CloudCover) + "%", LEFT);
+}
+
+void WindGust(int x, int y, float Windgust) {
+  addwind(x - 9, y, Small * 0.6, Windgust);
+  int unitYOffset = 0;
+  if (Units == "I") unitYOffset = 7;
+  drawString(x + 25, y - unitYOffset, String(Windgust, 1) + " " +
+              (Units == "R" || Units == "M" ? "m/s" : "mph"), LEFT);
 }
 
 void addmoon(int x, int y, bool IconSize) {
@@ -891,6 +1433,10 @@ void Nodata(int x, int y, bool IconSize, String IconName) {
 }
 
 // ################################################################################################
+
+//int SpaceWidth() {
+//  return getStringWidth(" ");
+//}
 
 void Visibility(int x, int y, String Visibility) {
   float start_angle = 0.52, end_angle = 2.61, Offset = 10;
@@ -929,7 +1475,6 @@ void DrawSunsetImage(int x, int y) {
   epd_draw_grayscale_image(area, (uint8_t *) sunset_data);
 }
 
-void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float Y1Max, String title, float DataArray[], int readings, boolean auto_scale, boolean barchart_mode) {
 /* (C) D L BIRD
     This function will draw a graph on a ePaper/TFT/LCD display using data from an array containing data to be graphed.
     The variable 'max_readings' determines the maximum number of data elements for each array. Call it with the following parametric data:
@@ -945,36 +1490,58 @@ void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float
     If called with Y!_Max value of 500 and the data never goes above 500, then autoscale will retain a 0-500 Y scale, if on, the scale increases/decreases to match the data.
     auto_scale_margin, e.g. if set to 1000 then autoscale increments the scale by 1000 steps.
 */
+
+void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float Y1Max, String title, float DataArray[], int readings, boolean auto_scale, boolean barchart_mode, bool percip_type_array[], bool non_negative) {
+
 #define auto_scale_margin 0 // Sets the autoscale increment, so axis steps up fter a change of e.g. 3
 #define y_minor_axis 5      // 5 y-axis division markers
   setFont(OpenSans10B);
-  int maxYscale = -10000;
-  int minYscale =  10000;
+  float maxYscale = -10000;
+  float minYscale =  10000;
   int last_x, last_y;
+  int days = max_readings / 8;
   float x2, y2;
   if (auto_scale == true) {
-    for (int i = 1; i < readings; i++ ) {
+    for (int i = 0; i < readings; i++ ) {
       if (DataArray[i] >= maxYscale) maxYscale = DataArray[i];
       if (DataArray[i] <= minYscale) minYscale = DataArray[i];
     }
-    maxYscale = round(maxYscale + auto_scale_margin); // Auto scale the graph and round to the nearest value defined, default was Y1Max
-    Y1Max = round(maxYscale + 0.5);
-    if (minYscale != 0) minYscale = round(minYscale - auto_scale_margin); // Auto scale the graph and round to the nearest value defined, default was Y1Min
-    Y1Min = round(minYscale);
+    float range = maxYscale - minYscale;
+    if (range < 0.1f) {
+        range = 0.1f;
+        maxYscale = minYscale + range;
+    }
+    float margin = range * 0.1f;
+    Y1Max = maxYscale + margin;
+    if (non_negative) {
+        Y1Min = minYscale;
+    } else {
+        Y1Min = minYscale - margin;
+    }
+    if (non_negative && Y1Min < 0.0f) Y1Min = 0.0f;
   }
   // Draw the graph
   last_x = x_pos + 1;
   last_y = y_pos + (Y1Max - constrain(DataArray[1], Y1Min, Y1Max)) / (Y1Max - Y1Min) * gheight;
   drawRect(x_pos, y_pos, gwidth + 3, gheight + 2, Grey);
   drawString(x_pos - 20 + gwidth / 2, y_pos - 28, title, CENTER);
-  for (int gx = 0; gx < readings; gx++) {
+  for (int gx = 1; gx < readings; gx++) {
     x2 = x_pos + gx * gwidth / (readings - 1) - 1 ; // max_readings is the global variable that sets the maximum data that can be plotted
     y2 = y_pos + (Y1Max - constrain(DataArray[gx], Y1Min, Y1Max)) / (Y1Max - Y1Min) * gheight + 1;
     if (barchart_mode) {
-      fillRect(last_x + 2, y2, (gwidth / readings) - 1, y_pos + gheight - y2 + 2, Black);
+      if (percip_type_array == NULL) {
+          fillRect(last_x + 2, y2, (gwidth / readings) - 1, y_pos + gheight - y2 + 2, Black);
+      } else {
+          if (percip_type_array[gx]) {
+              fillRect(last_x + 2, y2, (gwidth / readings) - 1, y_pos + gheight - y2 + 2, Black);
+          } else {
+              drawRect(last_x + 2, y2, (gwidth / readings) - 1, y_pos + gheight - y2 + 2, Grey);
+          }
+      }
     } else {
-      drawLine(last_x, last_y - 1, x2, y2 - 1, Black); // Two lines for hi-res display
+      drawLine(last_x, last_y - 1, x2, y2 - 1, Black); // Three lines for hi-res display
       drawLine(last_x, last_y, x2, y2, Black);
+      drawLine(last_x, last_y + 1, x2, y2 + 1, Black);
     }
     last_x = x2;
     last_y = y2;
@@ -985,22 +1552,34 @@ void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float
     for (int j = 0; j < number_of_dashes; j++) { // Draw dashed graph grid lines
       if (spacing < y_minor_axis) drawFastHLine((x_pos + 3 + j * gwidth / number_of_dashes), y_pos + (gheight * spacing / y_minor_axis), gwidth / (2 * number_of_dashes), Grey);
     }
-    if ((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing) < 5 || title == TXT_PRESSURE_IN) {
-      drawString(x_pos - 10, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 1), RIGHT);
+
+    float value = Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing;
+    
+    if (abs(value) < 0.05) value = 0.0;
+
+    if (title == TXT_HUMIDITY_PERCENT) {
+        drawString(x_pos - 7, y_pos + gheight * spacing / y_minor_axis - 5, String((int)value), RIGHT);
     }
-    else
-    {
-      if (Y1Min < 1 && Y1Max < 10) {
-        drawString(x_pos - 3, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 1), RIGHT);
-      }
-      else {
-        drawString(x_pos - 7, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 0), RIGHT);
-      }
+    // Imperial осадки → 2 знака
+    else if ((title == TXT_PRECIP_IN || title == TXT_SNOWFALL_IN) && Units == "I") {
+        drawString(x_pos - 10, y_pos + gheight * spacing / y_minor_axis - 5, String(value, 2), RIGHT);
+    }
+    // Давление в дюймах → 2 знака
+    else if (title == TXT_PRESSURE_IN) {
+        drawString(x_pos - 10, y_pos + gheight * spacing / y_minor_axis - 5, String(value, 1), RIGHT);
+    }
+    // Малые значения → 1 знак
+    else if (value < 10) {
+        drawString(x_pos - 10, y_pos + gheight * spacing / y_minor_axis - 5, String(value, 1), RIGHT);
+    }
+    // Остальное → целые
+    else {
+        drawString(x_pos - 7, y_pos + gheight * spacing / y_minor_axis - 5, String(value, 0), RIGHT);
     }
   }
-  for (int i = 0; i < 3; i++) {
-    drawString(20 + x_pos + gwidth / 3 * i, y_pos + gheight + 10, String(i) + "d", LEFT);
-    if (i < 2) drawFastVLine(x_pos + gwidth / 3 * i + gwidth / 3, y_pos, gheight, LightGrey);
+  for (int i = 0; i < days; i++) {
+    drawString(x_pos + gwidth / days / 2 + gwidth / days * i, y_pos + gheight + 10, String(i + 1) + "d", CENTER);
+    if (i < days - 1) drawFastVLine(x_pos + gwidth / days * i + gwidth / days, y_pos, gheight, LightGrey);
   }
 }
 
