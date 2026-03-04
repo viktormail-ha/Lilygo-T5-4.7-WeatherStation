@@ -9,6 +9,7 @@ const String TXT_FEELSLIKE        = "gefühlt";
 
 // Pressure
 const String TXT_PRESSURE_HPA     = "Luftdruck (hPa)";
+const String TXT_PRESSURE_MM      = "Luftdruck (mmHg)";
 const String TXT_PRESSURE_IN      = "Luftdruck (in)";
 
 //RainFall / SnowFall
