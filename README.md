@@ -14,9 +14,16 @@ https://github.com/CybDis/Lilygo-T5-4.7-WeatherStation-with-HomeAssistant
 
 Changes made in this fork:
 
-- modified wind icon rendering
-- modified weather icons
-- minor UI and other adjustments
+- Added wind gust display with a dynamic icon
+- Added a dynamic cloudiness icon
+- Added the ability to display atmospheric pressure in mmHg
+- Reworked weather icons; for precipitation three icon levels are used:
+  - light precipitation – 2 snowflakes or raindrops
+  - moderate precipitation – 3 snowflakes or raindrops
+  - heavy precipitation – 4 snowflakes or raindrops
+- Modified precipitation chart: if both snow and rain are present in the forecast, the chart displays light bars for snow and black bars for rain (if only snow or only rain is present, all bars are black)
+- Default: 5-day forecast displayed in charts
+- Minor UI adjustments
 
 ## Compiling and flashing
 Edit user_settings.h and enter OWM API key as well as the location for which you want to display the weather data.
