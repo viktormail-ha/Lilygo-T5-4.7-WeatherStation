@@ -23,6 +23,7 @@ Changes made in this fork:
   - heavy precipitation – 4 snowflakes or raindrops
 - Modified precipitation chart: if both snow and rain are present in the forecast, the chart displays light bars for snow and black bars for rain (if only snow or only rain is present, all bars are black)
 - Default: 5-day forecast displayed in charts
+- Default: data updates every 30 minutes
 - Minor UI adjustments
 
 ## Compiling and flashing
