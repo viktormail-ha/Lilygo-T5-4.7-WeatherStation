@@ -9,6 +9,7 @@ const String TXT_FEELSLIKE        = "FL";
 
 // Pressure
 const String TXT_PRESSURE_HPA     = "Pression (hPa)";
+const String TXT_PRESSURE_MM      = "Pression (mmHg)";
 const String TXT_PRESSURE_IN      = "Pression (in)";
 
 //RainFall / SnowFall
@@ -16,6 +17,9 @@ const String TXT_RAINFALL_MM = "Pluie (mm)";
 const String TXT_RAINFALL_IN = "Pluie (in)";
 const String TXT_SNOWFALL_MM = "Neige (mm)";
 const String TXT_SNOWFALL_IN = "Neige (in)";
+const String TXT_PRECIP_MM   = "Pluie/Nei (mm)";
+const String TXT_PRECIP_IN   = "Pluie/Nei (in)";
+const String TXT_NO_PRECIP   = "Sans préc";
 
 //Moon
 const String TXT_MOON_NEW             = "Nouvelle Lune";
