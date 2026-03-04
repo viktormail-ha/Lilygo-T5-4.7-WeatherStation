@@ -53,8 +53,7 @@ The original code created by https://github.com/G6EJD/ is using the GPLv3 https:
 This means that the original proprietary license that G6EJD tried to enforce is unlawful as it is not compatible with the GPLv3 and removed from this fork, while keeping the attribution and all the copyright of the original creator.
 
 ## Original project by CybDis
-If you like the original work consider supporting the author.
-**with caffeine:**  
+If you like the original work consider supporting the author:
 
 <a href="https://www.buymeacoffee.com/cybdis" target="_blank">
   <img src="https://raw.githubusercontent.com/CybDis/CybDis/main/bmc-yellow-button.png" height="60px"/></a>
