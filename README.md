@@ -32,17 +32,13 @@ To compile you will need following libraries.
 - https://github.com/Xinyuan-LilyGO/LilyGo-EPD47
 - https://github.com/bblanchon/ArduinoJson  
 
-You can add those via the library Manager
-Please note that you need Arduino ESP32 V 2.0.5 or above and below V3.0 for LilyGo-EPD47 to work. v2.0.15 is reommended.
+## Quick Flash Instructions
 
-In board manager choose ESP32 Dev Module with PSRAM Enabled. If you have the S3 version choose ESP32S3 Dev Module and enable PSRAM OPI.
-The project is configured as PlatformIO Project (Visual Studio Code AddIn) - to compile with arduino IDE rename src folder to OWM_EPD47.
-
-## LilyGO T5 Display FAQ
-
-- IO0 has been used and cannot be programmed.
-- How to turn off the blue LED light?
-    - To turn off the blue LED, you must call `epd_poweroff_all()`, which will turn off the entire power supply controlled by PWM_EN. Note that it cannot be turned off when powered by USB. It can only be turned off when powered by battery. For details, refer to `<examples/demo>`
+1. Connect the LilyGO T5 4.7" to your PC via USB.
+2. Open this project in **Visual Studio Code** with the **PlatformIO** extension installed.
+3. Press **Build** (checkmark icon) to compile the firmware.
+4. Press **Upload** (right arrow icon) to flash the device.
+5. Wait for the upload to finish and the device will start automatically.
 
 # License
 
