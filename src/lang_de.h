@@ -16,6 +16,9 @@ const String TXT_RAINFALL_MM = "Regen (mm)";
 const String TXT_RAINFALL_IN = "Regen (in)";
 const String TXT_SNOWFALL_MM = "Schnee (mm)";
 const String TXT_SNOWFALL_IN = "Schnee (in)";
+const String TXT_PRECIP_MM   = "Regen/Sch (mm)";
+const String TXT_PRECIP_IN   = "Regen/Sch (in)";
+const String TXT_NO_PRECIP   = "Kein Nied";
 
 //Moon
 const String TXT_MOON_NEW             = "Neumond";
