@@ -1086,13 +1086,18 @@ void addheavytstorm(int x, int y, int scale) {
   }
 }
 
-void addwind(int x, int y, float scale, float gust_ms) {
+void addwind(int x, int y, float scale, float gust_value) {
   // if (IconSize == SmallIcon) linesize = 3;
   auto fatLine = [&](int x0, int y0, int x1, int y1) {
     drawLine(x0, y0,     x1, y1,     Black);
     drawLine(x0, y0 + 1, x1, y1 + 1, Black);
     drawLine(x0, y0 - 1, x1, y1 - 1, Black);
   };
+  float gust_ms = gust_value;
+  if (Units == "I") {
+      // mph → m/s
+      gust_ms = gust_value * 0.44704f;  // точный коэффициент 1 mph ≈ 0.44704 m/s
+  }
   // === Определяем сколько базовых волн рисовать ===
   int waveCount = 3;       // обычно 3
   if (gust_ms < 5.0)          waveCount = 2; // слабый ветер
