@@ -26,7 +26,6 @@ Changes made in this fork:
 - Minor UI adjustments
 
 ## Compiling and flashing
-Edit user_settings.h and enter OWM API key as well as the location for which you want to display the weather data.
 
 To compile you will need following libraries.
 - https://github.com/Xinyuan-LilyGO/LilyGo-EPD47
@@ -34,11 +33,12 @@ To compile you will need following libraries.
 
 ## Quick Flash Instructions
 
-1. Connect the LilyGO T5 4.7" to your PC via USB.
-2. Open this project in **Visual Studio Code** with the **PlatformIO** extension installed.
-3. Press **Build** (checkmark icon) to compile the firmware.
-4. Press **Upload** (right arrow icon) to flash the device.
-5. Wait for the upload to finish and the device will start automatically.
+1. Edit user_settings.h and enter OWM API key as well as the location for which you want to display the weather data.
+2. Connect the LilyGO T5 4.7" to your PC via USB.
+3. Open this project in **Visual Studio Code** with the **PlatformIO** extension installed.
+4. Press **Build** (checkmark icon) to compile the firmware.
+5. Press **Upload** (right arrow icon) to flash the device.
+6. Wait for the upload to finish and the device will start automatically.
 
 # License
 
