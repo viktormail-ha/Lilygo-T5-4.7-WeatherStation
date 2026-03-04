@@ -1,9 +1,22 @@
+## This project is a modified fork of the original project by CybDis
+
 Weather Station and Mosquitto MQTT Values for LilyGO T5 4.7 inch e-paper display
 =======================================
 
 This project works with LilyGO T5 4.7 inch e-paper EPD display as available from [Lilygo](https://lilygo.cc/) and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
 
 ![](./assets/LilyGoWeatherStation.jpg)
+
+## Modifications
+
+This repository is a fork of:
+https://github.com/CybDis/Lilygo-T5-4.7-WeatherStation-with-HomeAssistant
+
+Changes made in this fork:
+
+- modified wind icon rendering
+- modified weather icons
+- minor UI and other adjustments
 
 ## Compiling and flashing
 Edit user_settings.h and enter OWM API key as well as the location for which you want to display the weather data.
@@ -39,7 +52,8 @@ The original code created by https://github.com/G6EJD/ is using the GPLv3 https:
 
 This means that the original proprietary license that G6EJD tried to enforce is unlawful as it is not compatible with the GPLv3 and removed from this fork, while keeping the attribution and all the copyright of the original creator.
 
-## Support my work ...
+## Original project by CybDis
+If you like the original work consider supporting the author.
 **with caffeine:**  
 
 <a href="https://www.buymeacoffee.com/cybdis" target="_blank">
