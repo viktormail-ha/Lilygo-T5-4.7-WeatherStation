@@ -5,7 +5,7 @@ Weather Station for LilyGO T5 4.7 inch e-paper display
 
 This project works with LilyGO T5 4.7 inch e-paper EPD display and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
 
-### Screen Comparison
+### Screen Comparison (same weather data)
 
 | Original Firmware                                               | Modified Version                                                   |
 | --------------------------------------------------------------- | ------------------------------------------------------------------ |
