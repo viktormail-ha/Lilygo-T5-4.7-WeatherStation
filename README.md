@@ -5,7 +5,7 @@ Weather Station and Mosquitto MQTT Values for LilyGO T5 4.7 inch e-paper display
 
 This project works with LilyGO T5 4.7 inch e-paper EPD display as available from [Lilygo](https://lilygo.cc/) and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
 
-![](./assets/LilyGoWeatherStation.jpg)
+![](./assets/Modified.jpg)
 
 ## Modifications
 
@@ -17,6 +17,8 @@ Changes made in this fork:
 - Added wind gust display with a dynamic icon
 - Added a dynamic cloudiness icon
 - Added the ability to display atmospheric pressure in mmHg
+- Fixed snowfall chart (it didn’t work in my case in the original firmware)
+- Fixed weather icon display (for example, Overcast Clouds previously showed a sun icon; now it correctly shows overcast clouds). 
 - Reworked weather icons; for precipitation three icon levels are used:
   - light precipitation – 2 snowflakes or raindrops
   - moderate precipitation – 3 snowflakes or raindrops
