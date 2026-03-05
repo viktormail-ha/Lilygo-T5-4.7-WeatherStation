@@ -21,7 +21,7 @@ Changes made in this fork:
 - Added wind gust display with a dynamic icon
 - Added a dynamic cloudiness icon
 - Added the ability to display atmospheric pressure in mmHg (in user_settings.h)
-- Fixed snowfall chart (it didn’t work in my case in the original firmware) - you can find it on Screen Comparison
+- Fixed snowfall chart (not working in the original firmware in my case). See Screen Comparison
 - Fixed weather icon display (for example, Overcast Clouds previously showed a sun icon; now it correctly shows overcast clouds)
 - Reworked weather icons and added new icons
 - For precipitation three icon levels are used:
