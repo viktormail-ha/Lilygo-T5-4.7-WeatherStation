@@ -44,12 +44,13 @@ To compile you will need following libraries.
 
 ## Quick Flash Instructions
 
-1. Connect the LilyGO T5 4.7" to your PC via USB.
-2. Open main folder of this project in **Visual Studio Code** with the **PlatformIO** extension installed.
-3. Edit user_settings.h and enter your WiFi credentials, your own OpenWeatherMap API key and your location for which you want to display the weather data.
-4. Press **Build** (checkmark icon) to compile the firmware.
-5. Press **Upload** (right arrow icon) to flash the device.
-6. Wait for the upload to finish and the device will start automatically.
+1. Download the firmware ZIP and extract it to a folder.
+2. Connect the LilyGO T5 4.7" to your PC via USB.
+3. Open main folder of this project in **Visual Studio Code** with the **PlatformIO** extension installed.
+4. Open src/user_settings.h in Visual Studio Code, enter or update your WiFi credentials, OpenWeatherMap API key, location, and other settings, then save the file.
+6. Press **Build** (checkmark icon) to compile the firmware.
+7. Press **Upload** (right arrow icon) to flash the device.
+8. Wait for the upload to finish and the device will start automatically.
 
 # License
 
