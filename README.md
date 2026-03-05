@@ -1,9 +1,9 @@
 ## This project is a modified fork of the original project by CybDis
 
-Weather Station and Mosquitto MQTT Values for LilyGO T5 4.7 inch e-paper display
+Weather Station for LilyGO T5 4.7 inch e-paper display
 =======================================
 
-This project works with LilyGO T5 4.7 inch e-paper EPD display as available from [Lilygo](https://lilygo.cc/) and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
+This project works with LilyGO T5 4.7 inch e-paper EPD display and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
 
 ![](./assets/Modified.jpg)
 
@@ -16,10 +16,11 @@ Changes made in this fork:
 
 - Added wind gust display with a dynamic icon
 - Added a dynamic cloudiness icon
-- Added the ability to display atmospheric pressure in mmHg
-- Fixed snowfall chart (it didn’t work in my case in the original firmware)
-- Fixed weather icon display (for example, Overcast Clouds previously showed a sun icon; now it correctly shows overcast clouds). 
-- Reworked weather icons; for precipitation three icon levels are used:
+- Added the ability to display atmospheric pressure in mmHg (in user_settings.h)
+- Fixed snowfall chart (it didn’t work in my case in the original firmware) - you can find screenshots of the original and modified firmware in the assets folder
+- Fixed weather icon display (for example, Overcast Clouds previously showed a sun icon; now it correctly shows overcast clouds)
+- Reworked weather icons and added new icons
+- For precipitation three icon levels are used:
   - light precipitation – 2 snowflakes or raindrops
   - moderate precipitation – 3 snowflakes or raindrops
   - heavy precipitation – 4 snowflakes or raindrops
@@ -36,9 +37,9 @@ To compile you will need following libraries.
 
 ## Quick Flash Instructions
 
-1. Edit user_settings.h and enter OWM API key as well as the location for which you want to display the weather data.
-2. Connect the LilyGO T5 4.7" to your PC via USB.
-3. Open this project in **Visual Studio Code** with the **PlatformIO** extension installed.
+1. Connect the LilyGO T5 4.7" to your PC via USB.
+2. Open main folder of this project in **Visual Studio Code** with the **PlatformIO** extension installed.
+3. Edit user_settings.h and enter your WiFi credentials, your own OpenWeatherMap API key and your location for which you want to display the weather data.
 4. Press **Build** (checkmark icon) to compile the firmware.
 5. Press **Upload** (right arrow icon) to flash the device.
 6. Wait for the upload to finish and the device will start automatically.
