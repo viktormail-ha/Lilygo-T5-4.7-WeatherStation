@@ -25,12 +25,12 @@ Changes made in this fork:
 - Added a dynamic cloudiness icon
 - Added the ability to display atmospheric pressure in mmHg (in user_settings.h)
 - Fixed snowfall chart (not working in the original firmware in my case). See Screen Comparison
-- Fixed weather icon (for example, "Overcast Clouds" previously showed a sun icon; now it displays correctly as overcast)
-- Reworked weather icons and added new icons
+- Fixed some weather icons (for example, "Overcast Clouds" previously showed a sun icon; now it displays correctly as overcast). See Screen Comparison
+- Reworked weather icons and added some new icons
 - For precipitation three icon levels are used:
-  - light precipitation – 2 snowflakes or raindrops
-  - moderate precipitation – 3 snowflakes or raindrops
-  - heavy precipitation – 4 snowflakes or raindrops
+  - light precipitation – 2 icons for rain, snow, drizzle, or thunderstorm
+  - moderate precipitation – 3 icons for rain, snow, drizzle, or thunderstorm
+  - heavy precipitation – 4 icons for rain, snow, drizzle, or thunderstorm
 - Modified precipitation chart: if both snow and rain are present in the forecast, the chart displays light bars for snow and black bars for rain (if only snow or only rain is present, all bars are black)
 - Default: 5-day forecast displayed in charts
 - Default: data updates every 30 minutes
