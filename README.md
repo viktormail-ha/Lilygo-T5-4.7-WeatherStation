@@ -5,9 +5,13 @@ Weather Station for LilyGO T5 4.7 inch e-paper display
 
 This project works with LilyGO T5 4.7 inch e-paper EPD display and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
 
-![](./assets/Modified.jpg)
+### Screen Comparison
 
-## Modifications
+| Original Firmware                                               | Modified Version                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| <img src="assets/Original.jpg" width="420"><br>Original version | <img src="assets/Modified.jpg" width="420"><br>My modified version |
+
+## Key Features & Improvements
 
 This repository is a fork of:
 https://github.com/CybDis/Lilygo-T5-4.7-WeatherStation-with-HomeAssistant
@@ -17,7 +21,7 @@ Changes made in this fork:
 - Added wind gust display with a dynamic icon
 - Added a dynamic cloudiness icon
 - Added the ability to display atmospheric pressure in mmHg (in user_settings.h)
-- Fixed snowfall chart (it didn’t work in my case in the original firmware) - you can find screenshots of the original and modified firmware in the assets folder
+- Fixed snowfall chart (it didn’t work in my case in the original firmware) - you can find it on Screen Comparison
 - Fixed weather icon display (for example, Overcast Clouds previously showed a sun icon; now it correctly shows overcast clouds)
 - Reworked weather icons and added new icons
 - For precipitation three icon levels are used:
