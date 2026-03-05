@@ -25,7 +25,7 @@ Changes made in this fork:
 - Added a dynamic cloudiness icon
 - Added the ability to display atmospheric pressure in mmHg (in user_settings.h)
 - Fixed snowfall chart (not working in the original firmware in my case). See Screen Comparison
-- Fixed weather icon display (for example, Overcast Clouds previously showed a sun icon; now it correctly shows overcast clouds)
+- Fixed weather icon (for example, "Overcast Clouds" previously showed a sun icon; now it displays correctly as overcast)
 - Reworked weather icons and added new icons
 - For precipitation three icon levels are used:
   - light precipitation – 2 snowflakes or raindrops
