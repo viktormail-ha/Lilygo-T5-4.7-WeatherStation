@@ -1,12 +1,12 @@
 ## This project is a modified fork of the original project by CybDis
 
-Weather Station for LilyGO T5 4.7 inch e-paper display
+ESP32 Weather Station for LilyGO T5 4.7" E-Paper (E-Ink) Display
 =======================================
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Built with PlatformIO](https://img.shields.io/badge/built%20with-PlatformIO-orange)](https://platformio.org/)
 ![ESP32](https://img.shields.io/badge/ESP32-supported-green)
 
-This project works with LilyGO T5 4.7 inch e-paper EPD display and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
+This project works with LilyGO T5 4.7 inch e-paper (E-Ink) EPD display and [OpenWeatherMap (OMW)](https://home.openweathermap.org) as ESP32 weather display.
 
 ### Screen Comparison (same weather data)
 
