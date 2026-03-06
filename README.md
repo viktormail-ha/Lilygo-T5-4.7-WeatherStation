@@ -21,8 +21,8 @@ https://github.com/CybDis/Lilygo-T5-4.7-WeatherStation-with-HomeAssistant
 
 Changes made in this fork:
 
-- Added wind gust display with a dynamic icon
-- Added a dynamic cloudiness icon
+- Added wind gust display with a dynamic icon (scale: 0–5–10–15+ m/s)
+- Added a dynamic cloudiness icon (scale: 0–10–30–60–85–100%).
 - Added the ability to display atmospheric pressure in mmHg (in user_settings.h)
 - Fixed snowfall chart (not working in the original firmware in my case). See Screen Comparison
 - Fixed some weather icons (for example, "Overcast Clouds" previously showed a sun icon; now it displays correctly as overcast). See Screen Comparison
