@@ -1217,8 +1217,8 @@ void FewClouds(int x, int y, bool IconSize, String IconName) {
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
   y += 10;
   if (IconSize == LargeIcon) scale = Large;
-  addcloud(x + (IconSize ? 20 : 0) - scale * 1.8, y - scale * 1.6, scale * (IconSize ? 0.7 : 0.6), linesize);
-  addsun((x + (IconSize ? 20 : 0)), y, scale * (IconSize ? 1.3 : 1), IconSize);
+  addcloud(x - (IconSize ? 35 : 15), y * (IconSize ? 0.75 : 0.93), scale * (IconSize ? 0.7 : 0.6), linesize);
+  addsun((x + (IconSize ? 20 : 0)), y  - (IconSize ? 0 : 10), scale * (IconSize ? 1.3 : 1), IconSize);
 }
 
 void ScatteredClouds(int x, int y, bool IconSize, String IconName) {
