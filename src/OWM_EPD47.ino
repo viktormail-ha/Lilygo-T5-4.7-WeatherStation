@@ -1209,7 +1209,7 @@ void ClearSky(int x, int y, bool IconSize, String IconName) {
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
   if (IconSize == LargeIcon) scale = Large;
   y += (IconSize ? 0 : 10);
-  addsun(x, y, scale * (IconSize ? 1.7 : 1.2), IconSize);
+  addsun(x, y - (IconSize ? 0 : 10), scale * (IconSize ? 1.7 : 1.2), IconSize);
 }
 
 void FewClouds(int x, int y, bool IconSize, String IconName) {
