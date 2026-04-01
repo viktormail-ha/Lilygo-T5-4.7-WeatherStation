@@ -49,7 +49,7 @@ To compile you will need following libraries.
 3. Open main folder of this project in **Visual Studio Code** with the **PlatformIO** extension installed.
 4. Open src/user_settings.h in Visual Studio Code, enter or update your WiFi credentials, OpenWeatherMap API key, location, and other settings, then save the file.
 5. Check the language file selected in user_settings.h (e.g., lang_en.h, lang_de.h, or lang_fr.h in the src folder) and adjust the translation if necessary.
-6. If needed, open src/OWM_EPD47.ino in Visual Studio Code and modify the weather update schedule (by default, the weather is updated every 30 minutes, and the device enters sleep mode daily from 03:00 to 06:00)
+6. If needed, open src/OWM_EPD47.ino in Visual Studio Code and modify the weather update schedule in lines 50-55 (by default, the weather is updated every 30 minutes, and the device enters sleep mode daily from 03:00 to 06:00)
 7. Press **Build** (checkmark icon) to compile the firmware.
 8. Press **Upload** (right arrow icon) to flash the device.
 9. Wait for the upload to finish and the device will start automatically.
