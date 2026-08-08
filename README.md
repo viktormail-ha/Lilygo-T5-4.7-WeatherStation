@@ -41,7 +41,7 @@ Changes made in this fork:
 ### 08.08.2026
 
 * Added a **Moon position indicator** showing whether the Moon is above or below the horizon. See the image below. If the indicator does not work correctly in your case, it can be disabled in `user_settings.h` by setting: `ShowMoonPosition = 0`
-* Added a **Moon event line** showing the time of the next Moon horizon crossing (rise or set) and the Moon's altitude (alt) above or below the horizon. See the image below. This information can be configured in `user_settings.h` using the following settings: `ShowMoonEventSection = 0` disables the display of the time of the next Moon horizon crossing; `ShowMoonLatVisible = 0` disables the display of the Moon's altitude when the Moon is above the horizon. If `ShowMoonLatVisible = 1`, you can also choose to display the Moon's altitude when the Moon is below the horizon by setting: `ShowMoonLatInvisible = 1`
+* Added a **Moon event line** showing the time of the next Moon horizon crossing (rise or set) and the Moon's altitude (alt) above or below the horizon. See the image below. This information can be configured in `user_settings.h` using the following settings: `ShowMoonEventSection = 0` disables the display of the time of the next Moon horizon crossing; `ShowMoonLatVisible = 0` disables the display of the Moon's altitude. If `ShowMoonLatVisible = 1`, you can also choose not to display the Moon's altitude when the Moon is below the horizon by setting: `ShowMoonLatInvisible = 0`
 
 ![Moon position indicator](assets/Changelog_20260808.jpg)
 
