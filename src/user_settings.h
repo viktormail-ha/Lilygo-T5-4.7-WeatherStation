@@ -27,6 +27,17 @@ const char* ntpServer   = "pool.ntp.org";                  // Or, choose a time 
 int  gmtOffset_sec      = 3 * 3600;                        // UK normal time is GMT, so GMT Offset is 0, for US (-5Hrs) is typically -18000, AU is typically (+8hrs) 28800
 int  daylightOffset_sec = 0;                               // In the UK DST is +1hr or 3600-secs, other countries may use 2hrs 7200 or 30-mins 1800 or 5.5hrs 19800 Ahead of GMT use + offset behind - offset
 
+// Moon section
+// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it.
+
+// Show the Moon's position relative to the horizon
+const int ShowMoonPosition = 1;                            // 1 = show the triangle indicating the Moon's position relative to the horizon in the Moon phase section
+
+// Moon event line under Visibility/Clouds
+const int ShowMoonEventSection = 1;                        // 1 = show the next Moon event (rise/set and time)
+const int ShowMoonLatVisible   = 1;                        // 1 = show the Moon's altitude when it is above the horizon
+const int ShowMoonLatInvisible = 1;                        // 1 = also show the Moon's altitude when it is below the horizon
+
 //Set your OWM Forecast Period
 const int max_readings  = 40;                              // 5-days (40 hours) here is OWM Forecast Period, but could be changed to 3- or 4-days (24 or 32 hours)
 
