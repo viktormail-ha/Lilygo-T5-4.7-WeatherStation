@@ -359,7 +359,8 @@ void DisplayMainWeatherSection(int x, int y) {
   setFont(OpenSans8B);
   DisplayTempHumiPressSection(x, y - 60);
 //  DisplayForecastTextSection(x - 55, y + 95);
-  DisplayVisiCCoverSection(x, y + 60);
+  DisplayVisiCCoverSection(x, y + 55);
+  DisplayMoonEventSection(x - 15, y + 95); // Отображение времени следующего события и высоты над/под горизонтом для Луны 
   DisplayForecastTextSection(SCREEN_WIDTH - 35, y + 95);
 }
 
@@ -506,6 +507,36 @@ void DisplayVisiCCoverSection(int x, int y) {
   WindGust(cursor, y, WxConditions[0].Windgust);
 }
 
+void DisplayMoonEventSection(int x, int y) {
+  if (!ShowMoonEventSection && !ShowMoonLatVisible) return;
+  setFont(OpenSans12B);
+  String result = "";
+
+  // 1. Ближайшее событие
+  if (ShowMoonEventSection) {
+    result += getNextMoonEventStr();   // вернёт "set 17:10" или "rise 22:35" или "—"
+  }
+
+  // 2. Высота
+  if (ShowMoonLatVisible) {
+    String altStr = getMoonAltitudeStr(ShowMoonLatInvisible == 1);  // вернёт "59°" или "-12°" или ""
+    
+    if (altStr.length() > 0) {
+      if (result.length() > 0 && result != "—") {
+        result += ", alt " + altStr;           // "set 17:10, alt 59°"
+      } else {
+        result = "alt " + altStr;              // "alt 59°"
+      }
+    }
+  }
+
+  if (result.length() == 0 || result == "—") return;
+
+  // Иконка + текст
+  addMoonIcon(x - 5, y + 8);
+  drawString(x + 18, y, result, LEFT);
+}
+
 void DisplayForecastWeather(int x, int y, int index, int fwidth) {
   x = x + fwidth * index;
   DisplayConditionsSection(x + fwidth / 2 - 5, y + 85, WxForecast[index].Icon, WxForecast[index].Id, SmallIcon);
@@ -526,13 +557,183 @@ void DisplayAstronomySection(int x, int y) {
   time_t now = time(NULL);
   struct tm * now_utc  = gmtime(&now);
   drawString(x + 5, y + 102, MoonPhase(now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere), LEFT);
-  DrawMoonImage(x + 10, y + 23); // Different references!
-  DrawMoon(x - 28, y - 15, 75, now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere); // Spaced at 1/2 moon size, so 10 - 75/2 = -28
-  drawString(x + 115, y + 40, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT); // Sunrise
-  drawString(x + 115, y + 80, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);  // Sunset
-  DrawSunriseImage(x + 180, y + 20);
-  DrawSunsetImage(x + 180, y + 60);
+  if (ShowMoonPosition == 1) { // Небольшой сдвиг изображения Луны, чтобы вмещался индикатор положения Луны над/под горизонтом
+    DrawMoonImage(x + 20, y + 10); // Different references!
+    DrawMoon(x - 18, y - 28, 75, now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere); // Spaced at 1/2 moon size, so 10 - 75/2 = -28
+  } else {
+    DrawMoonImage(x + 10, y + 23); // Different references!
+    DrawMoon(x - 28, y - 15, 75, now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere); // Spaced at 1/2 moon size, so 10 - 75/2 = -28
+  }
+  drawString(x + 130, y + 35, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT); // Sunrise
+  drawString(x + 130, y + 75, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);  // Sunset
+  DrawSunriseImage(x + 195, y + 15);
+  DrawSunsetImage(x + 195, y + 55);
 }
+
+
+// ====================== Moon position ======================
+
+const float DEG2RAD = PI / 180.0f;
+const float RAD2DEG = 180.0f / PI;
+
+float toDays(time_t utc) {
+  return (utc / 86400.0f) - 10957.5f;   // дни от J2000.0
+}
+
+void moonCoords(float d, float &ra, float &dec) {
+  float L = 218.316f + 13.176396f * d;
+  float M = 134.963f + 13.064993f * d;
+  float F = 93.272f  + 13.229350f * d;
+
+  float lon = L + 6.289f * sinf(M * DEG2RAD);
+  float lat = 5.128f * sinf(F * DEG2RAD);
+
+  float cosEps = cosf(23.439f * DEG2RAD);
+  float sinEps = sinf(23.439f * DEG2RAD);
+  float lonR = lon * DEG2RAD;
+  float latR = lat * DEG2RAD;
+
+  ra  = atan2f(sinf(lonR) * cosEps - tanf(latR) * sinEps, cosf(lonR));
+  dec = asinf(sinf(latR) * cosEps + cosf(latR) * sinEps * sinf(lonR));
+}
+
+float moonAltitude(time_t utc, float lat, float lon) {
+  float d = toDays(utc);
+  float ra, dec;
+  moonCoords(d, ra, dec);
+
+  // Local sidereal time (приближённо)
+  float lst = (280.160f + 360.9856235f * d) * DEG2RAD + lon * DEG2RAD;
+  float ha  = lst - ra;
+
+  float sinAlt = sinf(lat * DEG2RAD) * sinf(dec) +
+                 cosf(lat * DEG2RAD) * cosf(dec) * cosf(ha);
+
+  return asinf(constrain(sinAlt, -1.0f, 1.0f)) * RAD2DEG;
+}
+
+
+// ====================== Прогресс ======================
+void getMoonProgress(time_t now, float lat, float lon, float &progress, float &angle) {
+
+  time_t utc = now;
+
+  const float HORIZON = -0.3f;
+  float currentAlt = moonAltitude(utc, lat, lon);
+  bool visible = (currentAlt >= HORIZON);
+
+  // ----- Поиск предыдущего и следующего пересечения горизонта -----
+  const int step   = 300;          // 5 минут
+  const int window = 36 * 3600;    // ±36 часов
+
+  time_t prevCross = 0;
+  time_t nextCross = 0;
+  float  prevAlt   = moonAltitude(utc - window, lat, lon);
+
+  for (int i = 1; i <= (2 * window / step); i++) {
+    time_t t = (utc - window) + (time_t)i * step;
+    float alt = moonAltitude(t, lat, lon);
+
+    if ((prevAlt < HORIZON && alt >= HORIZON) ||
+        (prevAlt >= HORIZON && alt <  HORIZON)) {
+
+      float frac = (HORIZON - prevAlt) / (alt - prevAlt + 1e-6f);
+      time_t cross = t - step + (time_t)(frac * step);
+
+      if (cross <= utc) {
+        if (cross > prevCross) prevCross = cross;
+      } else {
+        if (nextCross == 0 || cross < nextCross) nextCross = cross;
+      }
+    }
+    prevAlt = alt;
+  }
+
+  if (prevCross == 0 || nextCross == 0) {
+    progress = 0.5f;
+    angle = visible ? 270.0f : 90.0f;
+    return;
+  }
+
+  float dur = (float)(nextCross - prevCross);
+  if (dur < 1800.0f) dur = 12.0f * 3600.0f;
+
+  progress = constrain((float)(utc - prevCross) / dur, 0.0f, 1.0f);
+
+  // ----- Углы -----
+  // Система координат дисплея: x вправо, y вниз
+  // 0° = право, 90° = низ, 180° = лево, 270° = верх
+  if (visible) {
+    // 0% = лево (180°), 50% = верх (270°), 100% = право (360°/0°)
+    angle = 180.0f + progress * 180.0f;
+  } else {
+    // 0% = право (0°), 50% = низ (90°), 100% = лево (180°)
+    angle = 0.0f + progress * 180.0f;
+  }
+
+  if (angle >= 360.0f) angle -= 360.0f;
+  if (angle <    0.0f) angle += 360.0f;
+
+  // Serial.printf("UTC=%ld  alt=%.1f  visible=%d  progress=%.3f  angle=%.1f\n",
+  //             utc, currentAlt, visible, progress, angle);
+  // Serial.printf("prev=%ld  next=%ld  dur=%.0f\n", prevCross, nextCross, dur);
+}
+
+// Функция, которая находит ближайшее событие и возвращает строку
+
+String getNextMoonEventStr() {
+  time_t utc = time(NULL);
+  float lat  = Latitude.toFloat();
+  float lon  = Longitude.toFloat();
+
+  const float HORIZON = -0.3f;
+  const int step   = 300;          // 5 мин
+  const int window = 48 * 3600;    // ищем на 2 суток вперёд
+
+  float prevAlt = moonAltitude(utc, lat, lon);
+  time_t nextEvent = 0;
+  bool   isRise    = false;
+
+  for (int i = 1; i <= (window / step); i++) {
+    time_t t = utc + (time_t)i * step;
+    float alt = moonAltitude(t, lat, lon);
+
+    // Пересечение горизонта
+    if ((prevAlt < HORIZON && alt >= HORIZON) ||
+        (prevAlt >= HORIZON && alt <  HORIZON)) {
+
+      float frac = (HORIZON - prevAlt) / (alt - prevAlt + 1e-6f);
+      nextEvent = t - step + (time_t)(frac * step);
+      isRise = (prevAlt < HORIZON);   // снизу вверх = восход
+      break;
+    }
+    prevAlt = alt;
+  }
+
+  if (nextEvent == 0) return "—";          // полярный случай
+
+  // Время в локальном формате ЧЧ:ММ
+  String timeStr = ConvertUnixTime(nextEvent).substring(0, 5);
+
+  if (isRise) return "rise " + timeStr;
+  else        return "set "  + timeStr;
+}
+
+// Функция, которая находит высоту Луны над/под горизонтом и возвращает строку
+
+String getMoonAltitudeStr(bool allowInvisible) {
+  time_t utc = time(NULL);
+  float lat  = Latitude.toFloat();
+  float lon  = Longitude.toFloat();
+  float alt  = moonAltitude(utc, lat, lon);
+
+  if (alt < -0.3f && !allowInvisible) return "";
+
+  char buf[12];
+  snprintf(buf, sizeof(buf), "%.0f°", alt);
+  return String(buf);
+}
+
 
 void DrawMoon(int x, int y, int diameter, int dd, int mm, int yy, String hemisphere) {
   double Phase = NormalizedMoonPhase(dd, mm, yy);
@@ -567,6 +768,51 @@ void DrawMoon(int x, int y, int diameter, int dd, int mm, int yy, String hemisph
     drawLine(pW3x, pW3y, pW4x, pW4y, White);
   }
   drawCircle(x + diameter - 1, y + diameter, diameter / 2, Black);
+  
+  // Добавляем полоски горизонта и рисуем индикатор положения луны над/под горизонтом
+
+  if (ShowMoonPosition == 1) {
+
+    // Горизонтальные полоски горизонта (слева и справа от круга)
+    int horizonY = y + diameter;                    // уровень центра круга (горизонт)
+    int gap      = 4;                               // небольшой зазор от края круга
+    int len      = 15;                              // длина полоски (чуть больше высоты треугольника)
+
+    drawFastHLine(x + diameter - 1 - diameter/2 - gap - len, horizonY, len, Black); // Левая полоска
+    drawFastHLine(x + diameter - 1 - diameter/2 - gap - len, horizonY + 1, len, Black); // Потолще
+    
+    drawFastHLine(x + diameter - 1 + diameter/2 + gap,       horizonY, len, Black); // Правая полоска
+    drawFastHLine(x + diameter - 1 + diameter/2 + gap,       horizonY + 1, len, Black); // Потолще
+
+    // Координаты наблюдателя
+    float lat = Latitude.toFloat();
+    float lon = Longitude.toFloat();
+    time_t now = time(NULL);
+    float progress, angle;
+    getMoonProgress(now, lat, lon, progress, angle);
+
+    int r = diameter / 2 + 10;
+    int cx = x + diameter - 1;
+    int cy = y + diameter;
+
+    float rad = angle * DEG2RAD;
+    int tx = cx + (int)(r * cosf(rad));
+    int ty = cy + (int)(r * sinf(rad));
+
+    // Треугольник, направленный наружу
+    int size = 11;
+    float a1 = rad + 2.3f;
+    float a2 = rad - 2.3f;
+
+    int x1 = tx + (int)(size * cosf(rad));
+    int y1 = ty + (int)(size * sinf(rad));
+    int x2 = tx + (int)(size * 0.65f * cosf(a1));
+    int y2 = ty + (int)(size * 0.65f * sinf(a1));
+    int x3 = tx + (int)(size * 0.65f * cosf(a2));
+    int y3 = ty + (int)(size * 0.65f * sinf(a2));
+
+    fillTriangle(x1, y1, x2, y2, x3, y3, Black);
+  }
 }
 
 String MoonPhase(int d, int m, int y, String hemisphere) {
@@ -1086,77 +1332,6 @@ void addheavytstorm(int x, int y, int scale) {
   }
 }
 
-void addwind(int x, int y, float scale, float gust_value) {
-  // if (IconSize == SmallIcon) linesize = 3;
-  auto fatLine = [&](int x0, int y0, int x1, int y1) {
-    drawLine(x0, y0,     x1, y1,     Black);
-    drawLine(x0, y0 + 1, x1, y1 + 1, Black);
-    drawLine(x0, y0 - 1, x1, y1 - 1, Black);
-  };
-  float gust_ms = gust_value;
-  if (Units == "I") {
-      // mph → m/s
-      gust_ms = gust_value * 0.44704f;  // точный коэффициент 1 mph ≈ 0.44704 m/s
-  }
-  // === Определяем сколько базовых волн рисовать ===
-  int waveCount = 3;       // обычно 3
-  if (gust_ms < 5.0)          waveCount = 2; // слабый ветер
-  else if (gust_ms < 10.0)    waveCount = 3; // средний ветер
-  else                        waveCount = 4; // сильный ветер
-  
-  // === Базовые волны ===
-  for (int i = 0; i < waveCount; i++) {
-    float offset_y = i * scale * 1.15;
-    float len      = scale * (3.4 + i * 0.6);
-    fatLine(x, y + offset_y, x + len * 0.55, y + offset_y - scale * 0.4);
-    fatLine(x + len * 0.55, y + offset_y - scale * 0.4, x + len * 0.82, y + offset_y + scale * 0.35);
-    fatLine(x + len * 0.82, y + offset_y + scale * 0.35, x + len, y + offset_y - scale * 0.25);
-  }
-  // === Ветер >= 15 м/с - Верхний всплеск ===
-  if (gust_ms >= 15.0) {
-    fatLine(x + scale * 2.8, y - scale * 1.1, x + scale * 4.2, y - scale * 2.2);
-    fatLine(x + scale * 4.0, y - scale * 2.0, x + scale * 4.8, y - scale * 1.4);
-  }
-  // // === Ветер >= 20 м/с — ещё верхний акцент и нижний порыв ===
-  // if (gust_ms >= 20.0) {
-  //   fatLine(x + scale * 0.8, y - scale * 0.3, x + scale * 2.4, y - scale * 1.8);
-  //   fatLine(x + scale * 1.8, y + scale * 3.4, x + scale * 3.5, y + scale * 5.0);
-  //   fatLine(x + scale * 3.3, y + scale * 4.7, x + scale * 4.6, y + scale * 3.9);
-  // }
-}
-
-void addcoversun(int x, int y, int scale) {
-  int circleThickness = 2;        // толщина круга
-  int rayThickness    = 3;        // толщина лучей
-  float rayGap        = scale * 0.25;
-  float rayLength     = scale * 0.55;
-  int inner = scale + rayGap;
-  int outer = inner + rayLength;
-  // ----- КРУГ (контурный) -----
-  for (int i = 0; i < circleThickness; i++)
-      drawCircle(x, y, scale - i, Black);
-  // ----- ВЕРТИКАЛЬНЫЕ ЛУЧИ -----
-  fillRect(x - rayThickness/2, y - outer, rayThickness, outer - inner, Black);
-  fillRect(x - rayThickness/2, y + inner, rayThickness, outer - inner, Black);
-  // ----- ГОРИЗОНТАЛЬНЫЕ ЛУЧИ -----
-  fillRect(x - outer, y - rayThickness/2, outer - inner, rayThickness, Black);
-  fillRect(x + inner, y - rayThickness/2, outer - inner, rayThickness, Black);
-  // ----- ДИАГОНАЛИ (через маленькие квадраты) -----
-  int steps = rayLength;   // сколько "точек" рисовать
-  for (int i = 0; i < steps; i++) {
-    int dx = inner + i;
-    int dy = inner + i;
-    // ↘
-    fillRect(x + dx - rayThickness/2, y + dy - rayThickness/2, rayThickness, rayThickness, Black);
-    // ↗
-    fillRect(x + dx - rayThickness/2, y - dy - rayThickness/2, rayThickness, rayThickness, Black);
-    // ↙
-    fillRect(x - dx - rayThickness/2, y + dy - rayThickness/2, rayThickness, rayThickness, Black);
-    // ↖
-    fillRect(x - dx - rayThickness/2, y - dy - rayThickness/2, rayThickness, rayThickness, Black);
-  }
-}
-
 void addsun(int x, int y, int scale, bool IconSize) {
   int linesize = 5;
   fillRect(x - scale * 2, y, scale * 4, linesize, Black);
@@ -1204,6 +1379,8 @@ void DrawAngledLine(int x, int y, int x1, int y1, int size, int color) {
   fillTriangle(x - dx, y + dy, x1 - dx, y1 + dy, x1 + dx, y1 - dy, color);
 }
 
+// ################# WEATHER ICONS ###########################################
+
 void ClearSky(int x, int y, bool IconSize, String IconName) {
   int scale = Small;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
@@ -1218,7 +1395,7 @@ void FewClouds(int x, int y, bool IconSize, String IconName) {
   y += 10;
   if (IconSize == LargeIcon) scale = Large;
   addcloud(x - (IconSize ? 35 : 15), y * (IconSize ? 0.75 : 0.93), scale * (IconSize ? 0.7 : 0.6), linesize);
-  addsun((x + (IconSize ? 20 : 0)), y  - (IconSize ? 0 : 10), scale * (IconSize ? 1.3 : 1), IconSize);
+  addsun((x + (IconSize ? 20 : 0)), y - (IconSize ? 0 : 10), scale * (IconSize ? 1.3 : 1), IconSize);
 }
 
 void ScatteredClouds(int x, int y, bool IconSize, String IconName) {
@@ -1383,6 +1560,111 @@ void Mist(int x, int y, bool IconSize, String IconName) {
   addfog(x, y, scale, linesize, IconSize);
 }
 
+void addmoon(int x, int y, bool IconSize) {
+  int xOffset = 65;
+  int yOffset = 12;
+  if (IconSize == LargeIcon) {
+    xOffset = 130;
+    yOffset = -40;
+  }
+  fillCircle(x - 28 + xOffset, y - 37 + yOffset, uint16_t(Small * 1.0), Black);
+  fillCircle(x - 16 + xOffset, y - 37 + yOffset, uint16_t(Small * 1.6), White);
+}
+
+void Nodata(int x, int y, bool IconSize, String IconName) {
+  if (IconSize == LargeIcon) setFont(OpenSans24B); else setFont(OpenSans12B);
+  drawString(x - 3, y - 10, "?", CENTER);
+}
+
+// ################# VISIBILITY SECTION ###########################################
+
+void addcoversun(int x, int y, int scale) {
+  int circleThickness = 2;        // толщина круга
+  int rayThickness    = 3;        // толщина лучей
+  float rayGap        = scale * 0.25;
+  float rayLength     = scale * 0.55;
+  int inner = scale + rayGap;
+  int outer = inner + rayLength;
+  // ----- КРУГ (контурный) -----
+  for (int i = 0; i < circleThickness; i++)
+      drawCircle(x, y, scale - i, Black);
+  // ----- ВЕРТИКАЛЬНЫЕ ЛУЧИ -----
+  fillRect(x - rayThickness/2, y - outer, rayThickness, outer - inner, Black);
+  fillRect(x - rayThickness/2, y + inner, rayThickness, outer - inner, Black);
+  // ----- ГОРИЗОНТАЛЬНЫЕ ЛУЧИ -----
+  fillRect(x - outer, y - rayThickness/2, outer - inner, rayThickness, Black);
+  fillRect(x + inner, y - rayThickness/2, outer - inner, rayThickness, Black);
+  // ----- ДИАГОНАЛИ (через маленькие квадраты) -----
+  int steps = rayLength;   // сколько "точек" рисовать
+  for (int i = 0; i < steps; i++) {
+    int dx = inner + i;
+    int dy = inner + i;
+    // ↘
+    fillRect(x + dx - rayThickness/2, y + dy - rayThickness/2, rayThickness, rayThickness, Black);
+    // ↗
+    fillRect(x + dx - rayThickness/2, y - dy - rayThickness/2, rayThickness, rayThickness, Black);
+    // ↙
+    fillRect(x - dx - rayThickness/2, y + dy - rayThickness/2, rayThickness, rayThickness, Black);
+    // ↖
+    fillRect(x - dx - rayThickness/2, y - dy - rayThickness/2, rayThickness, rayThickness, Black);
+  }
+}
+
+void addwind(int x, int y, float scale, float gust_value) {
+  // if (IconSize == SmallIcon) linesize = 3;
+  auto fatLine = [&](int x0, int y0, int x1, int y1) {
+    drawLine(x0, y0,     x1, y1,     Black);
+    drawLine(x0, y0 + 1, x1, y1 + 1, Black);
+    drawLine(x0, y0 - 1, x1, y1 - 1, Black);
+  };
+  float gust_ms = gust_value;
+  if (Units == "I") {
+      // mph → m/s
+      gust_ms = gust_value * 0.44704f;  // точный коэффициент 1 mph ≈ 0.44704 m/s
+  }
+  // === Определяем сколько базовых волн рисовать ===
+  int waveCount = 3;       // обычно 3
+  if (gust_ms < 5.0)          waveCount = 2; // слабый ветер
+  else if (gust_ms < 10.0)    waveCount = 3; // средний ветер
+  else                        waveCount = 4; // сильный ветер
+  
+  // === Базовые волны ===
+  for (int i = 0; i < waveCount; i++) {
+    float offset_y = i * scale * 1.15;
+    float len      = scale * (3.4 + i * 0.6);
+    fatLine(x, y + offset_y, x + len * 0.55, y + offset_y - scale * 0.4);
+    fatLine(x + len * 0.55, y + offset_y - scale * 0.4, x + len * 0.82, y + offset_y + scale * 0.35);
+    fatLine(x + len * 0.82, y + offset_y + scale * 0.35, x + len, y + offset_y - scale * 0.25);
+  }
+  // === Ветер >= 15 м/с - Верхний всплеск ===
+  if (gust_ms >= 15.0) {
+    fatLine(x + scale * 2.8, y - scale * 1.1, x + scale * 4.2, y - scale * 2.2);
+    fatLine(x + scale * 4.0, y - scale * 2.0, x + scale * 4.8, y - scale * 1.4);
+  }
+  // // === Ветер >= 20 м/с — ещё верхний акцент и нижний порыв ===
+  // if (gust_ms >= 20.0) {
+  //   fatLine(x + scale * 0.8, y - scale * 0.3, x + scale * 2.4, y - scale * 1.8);
+  //   fatLine(x + scale * 1.8, y + scale * 3.4, x + scale * 3.5, y + scale * 5.0);
+  //   fatLine(x + scale * 3.3, y + scale * 4.7, x + scale * 4.6, y + scale * 3.9);
+  // }
+}
+
+void Visibility(int x, int y, String Visibility) {
+  float start_angle = 0.52, end_angle = 2.61, Offset = 10;
+  int r = 14;
+  for (float i = start_angle; i < end_angle; i = i + 0.05) {
+    drawPixel(x + r * cos(i), y - r / 2 + r * sin(i) + Offset, Black);
+    drawPixel(x + r * cos(i), 1 + y - r / 2 + r * sin(i) + Offset, Black);
+  }
+  start_angle = 3.61; end_angle = 5.78;
+  for (float i = start_angle; i < end_angle; i = i + 0.05) {
+    drawPixel(x + r * cos(i), y + r / 2 + r * sin(i) + Offset, Black);
+    drawPixel(x + r * cos(i), 1 + y + r / 2 + r * sin(i) + Offset, Black);
+  }
+  fillCircle(x, y + Offset, r / 4, Black);
+  drawString(x + 20, y, Visibility, LEFT);
+}
+
 void ClearSkyCover(int x, int y, int CloudCover) {
   addcoversun(x, y + 5, Small); // Main sun
   drawString(x + 30, y, String(CloudCover) + "%", LEFT);
@@ -1421,43 +1703,7 @@ void WindGust(int x, int y, float Windgust) {
               (Units == "R" || Units == "M" ? "m/s" : "mph"), LEFT);
 }
 
-void addmoon(int x, int y, bool IconSize) {
-  int xOffset = 65;
-  int yOffset = 12;
-  if (IconSize == LargeIcon) {
-    xOffset = 130;
-    yOffset = -40;
-  }
-  fillCircle(x - 28 + xOffset, y - 37 + yOffset, uint16_t(Small * 1.0), Black);
-  fillCircle(x - 16 + xOffset, y - 37 + yOffset, uint16_t(Small * 1.6), White);
-}
-
-void Nodata(int x, int y, bool IconSize, String IconName) {
-  if (IconSize == LargeIcon) setFont(OpenSans24B); else setFont(OpenSans12B);
-  drawString(x - 3, y - 10, "?", CENTER);
-}
-
-// ################################################################################################
-
-//int SpaceWidth() {
-//  return getStringWidth(" ");
-//}
-
-void Visibility(int x, int y, String Visibility) {
-  float start_angle = 0.52, end_angle = 2.61, Offset = 10;
-  int r = 14;
-  for (float i = start_angle; i < end_angle; i = i + 0.05) {
-    drawPixel(x + r * cos(i), y - r / 2 + r * sin(i) + Offset, Black);
-    drawPixel(x + r * cos(i), 1 + y - r / 2 + r * sin(i) + Offset, Black);
-  }
-  start_angle = 3.61; end_angle = 5.78;
-  for (float i = start_angle; i < end_angle; i = i + 0.05) {
-    drawPixel(x + r * cos(i), y + r / 2 + r * sin(i) + Offset, Black);
-    drawPixel(x + r * cos(i), 1 + y + r / 2 + r * sin(i) + Offset, Black);
-  }
-  fillCircle(x, y + Offset, r / 4, Black);
-  drawString(x + 20, y, Visibility, LEFT);
-}
+// ################# MOON SECTION ###########################################
 
 void DrawMoonImage(int x, int y) {
   Rect_t area = {
@@ -1479,6 +1725,15 @@ void DrawSunsetImage(int x, int y) {
   };
   epd_draw_grayscale_image(area, (uint8_t *) sunset_data);
 }
+
+void addMoonIcon(int x, int y) {
+  int r = 8;
+  fillCircle(x, y, r, Black);
+  fillCircle(x + 4, y - 1, r - 1, White);
+  drawCircle(x, y, r, Black);
+}
+
+// ################# GRAPH SECTION ###########################################
 
 /* (C) D L BIRD
     This function will draw a graph on a ePaper/TFT/LCD display using data from an array containing data to be graphed.
