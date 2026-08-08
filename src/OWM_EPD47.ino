@@ -729,8 +729,11 @@ String getMoonAltitudeStr(bool allowInvisible) {
 
   if (alt < -0.3f && !allowInvisible) return "";
 
+  int altInt = (int)roundf(alt);
+  if (altInt == 0) altInt = 0;
+
   char buf[12];
-  snprintf(buf, sizeof(buf), "%.0f°", alt);
+  snprintf(buf, sizeof(buf), "%d°", altInt);
   return String(buf);
 }
 
