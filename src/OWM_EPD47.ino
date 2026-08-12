@@ -1853,8 +1853,8 @@ void ClearSkyCover(int x, int y, int CloudCover) {
 }
 
 void FewCloudsCover(int x, int y, int CloudCover) {
-  addcloud(x - 15, y, Small * 0.4, 2); // Cloud top left
   addcoversun(x, y + 5, Small); // Main sun
+  addcloud(x - 15, y, Small * 0.4, 2); // Cloud top left
   drawString(x + 30, y, String(CloudCover) + "%", LEFT);
 }
 
