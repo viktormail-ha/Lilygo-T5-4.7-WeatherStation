@@ -38,12 +38,13 @@ Changes made in this fork:
 
 ## Changelog
 
-### 08.08.2026
+### 12.08.2026
 
 * Added a **Moon position indicator** showing whether the Moon is above or below the horizon. See the image below. If the indicator does not work correctly in your case, it can be disabled in `user_settings.h` by setting: `ShowMoonPosition = 0`
 * Added a **Moon event line** showing the time of the next Moon horizon crossing (rise or set) and the Moon's altitude (alt) above or below the horizon. See the image below. This information can be configured in `user_settings.h` using the following settings: `ShowMoonEventSection = 0` disables the display of the time of the next Moon horizon crossing; `ShowMoonLatVisible = 0` disables the display of the Moon's altitude. If `ShowMoonLatVisible = 1`, you can also choose not to display the Moon's altitude when the Moon is below the horizon by setting: `ShowMoonLatInvisible = 0`
+* Added support for displaying information from Home Assistant on the display. Data from up to 6 sensors can be displayed across 3 lines, with 2 sensors per line. The feature can be enabled and each sensor can be configured in `user_settings.h`. It is disabled by default. To connect to Home Assistant, you need to create a Long-Lived Access Token: Profile → Long-Lived Access Tokens → Create Token
 
-![Moon position indicator](assets/Changelog_20260808.jpg)
+![Moon position indicator and Home Assistant sensors](assets/Changelog_20260812.jpg)
 
 ## Compiling and flashing
 
