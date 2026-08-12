@@ -35,6 +35,20 @@ boolean SmallIcon   = false;
 #define Small  10           // For icon drawing
 String  Time_str = "--:--:--";
 String  Date_str = "-- --- ----";
+
+// Home Assistant section:
+String haValue1 = "—";
+String haValue2 = "—";
+String haValue3 = "—";
+String haValue4 = "—";
+String haValue5 = "—";
+String haValue6 = "—";
+bool haAnySensorEnabled() {
+  return (ha_sensor1_on == 1) || (ha_sensor2_on == 1) ||
+         (ha_sensor3_on == 1) || (ha_sensor4_on == 1) ||
+         (ha_sensor5_on == 1) || (ha_sensor6_on == 1);
+}
+
 int     wifi_signal, CurrentHour = 0, CurrentMin = 0, CurrentSec = 0, EventCnt = 0, vref = 1100;
 //################ PROGRAM VARIABLES and OBJECTS ##########################################
 
@@ -153,6 +167,12 @@ void setup() {
         Attempts++;
       }
       Serial.println("Received all weather data...");
+
+      // Home Assistant section
+      if (ha_data == 1 && haAnySensorEnabled()) {
+        obtainHomeAssistantData(client);
+      }
+
       if (RxWeather && RxForecast) { // Only if received both Weather or Forecast proceed
         StopWiFi();         // Reduces power consumption
         epd_poweron();      // Switch on EPD display
@@ -292,6 +312,72 @@ bool obtainWeatherData(WiFiClient & client, const String & RequestType) {
   return true;
 }
 
+// Home Assistant section
+String fetchHAState(WiFiClient & client, const char* entity_id, int roundDigits) {
+  HTTPClient http;
+  String url = "http://" + String(ha_host) + ":" + String(ha_port) +
+               "/api/states/" + String(entity_id);
+
+  http.begin(client, url);
+  http.addHeader("Authorization", "Bearer " + String(ha_token));
+  http.addHeader("Content-Type", "application/json");
+  http.setTimeout(5000);
+
+  int httpCode = http.GET();
+  if (httpCode != HTTP_CODE_OK) {
+    http.end();
+    return "—";
+  }
+
+  String payload = http.getString();
+  http.end();
+
+  DynamicJsonDocument doc(1024);
+  if (deserializeJson(doc, payload)) return "—";
+
+  String state;
+  if (doc["state"].is<const char*>()) {
+    // Пробуем как число — чтобы округлить
+    float f = atof(doc["state"].as<const char*>());
+    if (f != 0.0f || doc["state"].as<String>() == "0") {
+      state = String(f, roundDigits);
+    } else {
+      state = doc["state"].as<const char*>();  // нечисловой state (unavailable и т.п.)
+    }
+  } else if (doc["state"].is<float>() || doc["state"].is<int>()) {
+    state = String(doc["state"].as<float>(), roundDigits);
+  } else {
+    return "—";
+  }
+
+  const char* unit = doc["attributes"]["unit_of_measurement"];
+  if (unit && strlen(unit) > 0) return state + unit;  // "42%" без пробела, или state + " " + unit
+  return state;
+}
+
+// Home Assistant section
+bool obtainHomeAssistantData(WiFiClient & client) {
+  if (ha_data != 1 || !haAnySensorEnabled()) {
+    return false;   // HA полностью выключен
+  }
+
+  if (ha_sensor1_on == 1) haValue1 = fetchHAState(client, ha_sensor1, ha_sensor1_round);
+  if (ha_sensor2_on == 1) haValue2 = fetchHAState(client, ha_sensor2, ha_sensor2_round);
+  if (ha_sensor3_on == 1) haValue3 = fetchHAState(client, ha_sensor3, ha_sensor3_round);
+  if (ha_sensor4_on == 1) haValue4 = fetchHAState(client, ha_sensor4, ha_sensor4_round);
+  if (ha_sensor5_on == 1) haValue5 = fetchHAState(client, ha_sensor5, ha_sensor5_round);
+  if (ha_sensor6_on == 1) haValue6 = fetchHAState(client, ha_sensor6, ha_sensor6_round);
+
+  Serial.printf("HA: %s%s | %s%s | %s%s | %s%s\n",
+                ha_sensor1_name, haValue1.c_str(),
+                ha_sensor2_name, haValue2.c_str(),
+                ha_sensor3_name, haValue3.c_str(),
+                ha_sensor4_name, haValue4.c_str(),
+                ha_sensor5_name, haValue5.c_str(),
+                ha_sensor6_name, haValue6.c_str());
+  return true;
+}
+
 float mm_to_inches(float value_mm) {
   return 0.0393701 * value_mm;
 }
@@ -344,11 +430,82 @@ void DisplayWeather() {                          // 4.7" e-paper display is 960x
   DisplayGraphSection(320, 220);                 // Graphs of pressure, temperature, humidity and rain or snowfall
 }
 
+
+void setHAFont() {
+  if (ha_font == 10)      setFont(OpenSans10B);
+  else if (ha_font == 12) setFont(OpenSans12B);
+  else if (ha_font == 18) setFont(OpenSans18B);
+  else if (ha_font == 24) setFont(OpenSans24B);
+  else                    setFont(OpenSans8B);  // по умолчанию
+}
+
+
 void DisplayGeneralInfoSection() {
   setFont(OpenSans10B);
+
+  char* cityData = const_cast<char*>(City.c_str());
+  int32_t x1, y1, w, h;
+  int32_t xx = 5, yy = 2;
+  get_text_bounds(&currentFont, cityData, &xx, &yy, &x1, &y1, &w, &h, NULL);
+
+  int cityEnd   = 5 + w;
+  int dateStart = 500;
+  int midX      = (cityEnd + dateStart) / 2;
+
+  // City
   drawString(5, 2, City, LEFT);
+
+  // Home Assistant section
+  if (ha_data == 1 && haAnySensorEnabled()) {
+    setHAFont();
+
+    // Строка 1: сенсоры 1 и 2
+    String line1 = "";
+    if (ha_sensor1_on == 1) line1 += String(ha_sensor1_name) + haValue1;
+    if (ha_sensor2_on == 1) {
+      if (line1.length() > 0) line1 += "; ";
+      line1 += String(ha_sensor2_name) + haValue2;
+    }
+    if (line1.length() > 0) {
+      drawString(midX, 0, line1, CENTER);
+    }
+
+    // Строка 2: сенсоры 3 и 4
+    String line2 = "";
+    if (ha_sensor3_on == 1) line2 += String(ha_sensor3_name) + haValue3;
+    if (ha_sensor4_on == 1) {
+      if (line2.length() > 0) line2 += "; ";
+      line2 += String(ha_sensor4_name) + haValue4;
+    }
+
+    int line2EndX = midX;   // если строки нет
+
+    if (line2.length() > 0) {
+      char* data = const_cast<char*>(line2.c_str());
+      int32_t x1, y1, w, h;
+      int32_t xx = midX, yy = 22;
+      get_text_bounds(&currentFont, data, &xx, &yy, &x1, &y1, &w, &h, NULL);
+
+      line2EndX = midX + w / 2;   // конец второй строки
+      drawString(midX, 32, line2, CENTER);   // чуть ниже
+    }
+
+    // Строка 3: сенсоры 5 и 6
+    String line3 = "";
+    if (ha_sensor5_on == 1) line3 += String(ha_sensor5_name) + haValue5;
+    if (ha_sensor6_on == 1) {
+      if (line3.length() > 0) line3 += "; ";
+      line3 += String(ha_sensor6_name) + haValue6;
+    }
+
+    if (line3.length() > 0) {
+      drawString((line2EndX + 905) / 2, 32, line3, CENTER);   // чуть ниже
+    }
+  }
+
+  // Дата
   setFont(OpenSans8B);
-  drawString(500, 2, Date_str + "  @   " + Time_str, LEFT);
+  drawString(dateStart, 2, Date_str + "  @   " + Time_str, LEFT);
 }
 
 void DisplayWeatherIcon(int x, int y) {
@@ -424,14 +581,22 @@ void DisplayTempHumiPressSection(int x, int y) {
   setFont(OpenSans24B);
   
   String tempHumi = String(WxConditions[0].Temperature, 1) + "° " + String(WxConditions[0].Humidity, 0) + "%";
-  drawString(x - 30, y, tempHumi, LEFT);
+  if (ha_data == 1 && haAnySensorEnabled()) {
+    drawString(x - 30, y + 20, tempHumi, LEFT);
+  } else {
+    drawString(x - 30, y, tempHumi, LEFT);
+  }
   int char_width = 16;
   int text_width = tempHumi.length() * char_width;
   int pressX = (x - 30) + text_width + 30;
 
   setFont(OpenSans24B);
-  DrawPressureAndTrend(pressX, y + 15, WxConditions[0].Pressure, WxConditions[0].Trend);
-  
+  if (ha_data == 1 && haAnySensorEnabled()) {
+    DrawPressureAndTrend(pressX, y + 37, WxConditions[0].Pressure, WxConditions[0].Trend);
+  } else {
+    DrawPressureAndTrend(pressX, y + 15, WxConditions[0].Pressure, WxConditions[0].Trend);
+  }
+
   int Yoffset = 65;
   setFont(OpenSans12B);
   drawString(x - 30, y + Yoffset, TXT_FEELSLIKE + String(WxConditions[0].FeelsLike, 1) + "°   " + TXT_HILO + String(WxConditions[0].High, 0) + "° | " + String(WxConditions[0].Low, 0) + "°", LEFT);
@@ -854,6 +1019,7 @@ void DisplayForecastSection(int x, int y) {
     f++;
   } while (f < 8);
 }
+
 
 void DisplayGraphSection(int x, int y) {
   int r = 0;
