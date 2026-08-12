@@ -46,6 +46,8 @@ const int ShowMoonLatInvisible = 1;                        // 1 = also show the 
 // ====================== HOME ASSISTANT SECTION ======================
 // This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ha_data to zero).
 // By default it is disabled
+// If only line 1 is active (sensor 1 and/or 2), while all other sensors are disabled, line 1 is centered between City and Data.
+// Otherwise (if line 1 and line 2 and/or line 3 are active), lines 1 and 2 are right-aligned at a fixed distance from Data, while line 3 is left-aligned with the beginning of Data.
 
 const int  ha_data   = 0;                                  // 1 = use HA, otherwise disabled
 const char* ha_host  = "192.168.1.150";                    // Change to your Home Assistant IP address
@@ -55,7 +57,7 @@ const char* ha_token = "eyJhbGchgndyKU71NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZJF8Nhb
 
 // Font size for Home Assistant sensor lines
 const int ha_font = 10;                                    // Use 8, 10, or 12 when using 2 or 3 lines (3–6 sensors); 10 usually looks best
-                                                           // If you are using only one line (1–2 sensors), you can set this to 18 or even to 24 (12 or 18 looks best in this case)
+                                                           // If you are using only one line (1–2 sensors with very short names, for example like this: "M: 47%; C: 13%"), you can try to set this to 18 or even to 24 for 1 sensor, for example like this: "M: 47%" (12 or 18 might be better in any case)
 
 // Line 1: sensors 1 and 2
 // Sensor 1
