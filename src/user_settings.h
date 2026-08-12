@@ -27,8 +27,12 @@ const char* ntpServer   = "pool.ntp.org";                  // Or, choose a time 
 int  gmtOffset_sec      = 3 * 3600;                        // UK normal time is GMT, so GMT Offset is 0, for US (-5Hrs) is typically -18000, AU is typically (+8hrs) 28800
 int  daylightOffset_sec = 0;                               // In the UK DST is +1hr or 3600-secs, other countries may use 2hrs 7200 or 30-mins 1800 or 5.5hrs 19800 Ahead of GMT use + offset behind - offset
 
-// Moon section
-// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it.
+//Set your OWM Forecast Period
+const int max_readings  = 40;                              // 5-days (40 hours) here is OWM Forecast Period, but could be changed to 3- or 4-days (24 or 32 hours)
+
+
+// ====================== MOON SECTION ======================
+// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ShowMoonPosition, ShowMoonEventSection, ShowMoonLatVisible to zero).
 
 // Show the Moon's position relative to the horizon
 const int ShowMoonPosition = 1;                            // 1 = show the triangle indicating the Moon's position relative to the horizon in the Moon phase section
@@ -38,8 +42,60 @@ const int ShowMoonEventSection = 1;                        // 1 = show the next 
 const int ShowMoonLatVisible   = 1;                        // 1 = show the Moon's altitude when it is above the horizon
 const int ShowMoonLatInvisible = 1;                        // 1 = also show the Moon's altitude when it is below the horizon
 
-//Set your OWM Forecast Period
-const int max_readings  = 40;                              // 5-days (40 hours) here is OWM Forecast Period, but could be changed to 3- or 4-days (24 or 32 hours)
+
+// ====================== HOME ASSISTANT SECTION ======================
+// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ha_data to zero).
+// By default it is disabled
+
+const int  ha_data   = 0;                                  // 1 = use HA, otherwise disabled
+const char* ha_host  = "192.168.1.150";                    // Change to your Home Assistant IP address
+const int   ha_port  = 8123;                               // Specify the Home Assistant port (default: 8123)
+// Create a Long-Lived Access Token in HA (Profile → Long-Lived Access Tokens → Create Token), do not use my token (it is just for example):
+const char* ha_token = "eyJhbGchgndyKU71NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZJF8NhbvlIbzMDI0YjM1YmIyNzY1MDM3ZjBynrLvo74bGFlhdCI6MTc4NjQzMjQ5MCwiZXhwIjoyMTAxNzkyNDkwfQ.AZlKs-ca6dz_Xxe6o7Celxl1Pf_cCnRBQ576ro5fUCM";
+
+// Font size for Home Assistant sensor lines
+const int ha_font = 10;                                    // Use 8, 10, or 12 when using 2 or 3 lines (3–6 sensors); 10 usually looks best
+                                                           // If you are using only one line (1–2 sensors), you can set this to 18 or even to 24 (12 or 18 looks best in this case)
+
+// Line 1: sensors 1 and 2
+// Sensor 1
+const int   ha_sensor1_on    = 1;                          // 1 = use the sensor for display, otherwise disabled (by default it is disabled)
+const char* ha_sensor1       = "sensor.xerox_workcentre_6025_magenta_toner_cartridge"; // Specify the sensor ID from HA whose value will be shown on the display (in this example, the printer's magenta toner cartridge)
+const char* ha_sensor1_name  = "Magenta: ";                // Specify the sensor name to be shown on the display; keep ": " at the end (in this example, "Magenta: "). Use short names
+const int   ha_sensor1_round = 0;                          // Round the sensor value to this many decimal places (0 = integer)
+
+// Sensor 2
+const int   ha_sensor2_on    = 1;
+const char* ha_sensor2       = "sensor.xerox_workcentre_6025_cyan_toner_cartridge";
+const char* ha_sensor2_name  = "Cyan: ";
+const int   ha_sensor2_round = 0;
+
+// Line 2: sensors 3 and 4
+// Sensor 3
+const int   ha_sensor3_on    = 1;
+const char* ha_sensor3       = "sensor.xerox_workcentre_6025_yellow_toner_cartridge";
+const char* ha_sensor3_name  = "Yellow: ";
+const int   ha_sensor3_round = 0;
+
+// Sensor 4
+const int   ha_sensor4_on    = 1;
+const char* ha_sensor4       = "sensor.xerox_workcentre_6025_black_toner_cartridge";
+const char* ha_sensor4_name  = "Black: ";
+const int   ha_sensor4_round = 0;
+
+// Line 3: sensors 5 and 6
+// Sensor 5
+const int   ha_sensor5_on    = 1;
+const char* ha_sensor5       = "sensor.thb2_b76f_temperature";
+const char* ha_sensor5_name  = "Street Temp: ";
+const int   ha_sensor5_round = 1;
+
+// Sensor 6
+const int   ha_sensor6_on    = 1;
+const char* ha_sensor6       = "sensor.thb2_b76f_humidity";
+const char* ha_sensor6_name  = "Hum: ";
+const int   ha_sensor6_round = 1;
+
 
 // Example time zones
 //const char* Timezone = "MET-1METDST,M3.5.0/01,M10.5.0/02"; // Most of Europe
