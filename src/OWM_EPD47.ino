@@ -48,6 +48,10 @@ bool haAnySensorEnabled() {
          (ha_sensor3_on == 1) || (ha_sensor4_on == 1) ||
          (ha_sensor5_on == 1) || (ha_sensor6_on == 1);
 }
+bool haOnlyFirstLineEnabled() {
+  return (ha_sensor3_on != 1) && (ha_sensor4_on != 1) &&
+         (ha_sensor5_on != 1) && (ha_sensor6_on != 1);
+}
 
 int     wifi_signal, CurrentHour = 0, CurrentMin = 0, CurrentSec = 0, EventCnt = 0, vref = 1100;
 //################ PROGRAM VARIABLES and OBJECTS ##########################################
@@ -443,21 +447,15 @@ void setHAFont() {
 void DisplayGeneralInfoSection() {
   setFont(OpenSans10B);
 
-  char* cityData = const_cast<char*>(City.c_str());
-  int32_t x1, y1, w, h;
-  int32_t xx = 5, yy = 2;
-  get_text_bounds(&currentFont, cityData, &xx, &yy, &x1, &y1, &w, &h, NULL);
-
-  int cityEnd   = 5 + w;
   int dateStart = 500;
-  int midX      = (cityEnd + dateStart) / 2;
+  int line1X    = 450;
 
   // City
-  drawString(5, 2, City, LEFT);
+  drawString(5, 0, City, LEFT);
 
   // Home Assistant section
   if (ha_data == 1 && haAnySensorEnabled()) {
-    setHAFont();
+    
 
     // Строка 1: сенсоры 1 и 2
     String line1 = "";
@@ -467,7 +465,20 @@ void DisplayGeneralInfoSection() {
       line1 += String(ha_sensor2_name) + haValue2;
     }
     if (line1.length() > 0) {
-      drawString(midX, 0, line1, CENTER);
+      if (haOnlyFirstLineEnabled()) {
+        char* cityData = const_cast<char*>(City.c_str());
+        int32_t x1, y1, w, h;
+        int32_t xx = 5, yy = 2;
+        get_text_bounds(&currentFont, cityData, &xx, &yy, &x1, &y1, &w, &h, NULL);
+
+        int cityEnd   = 5 + w;
+        int line1X    = (cityEnd + dateStart) / 2;
+        setHAFont();
+        drawString(line1X, 0, line1, CENTER);
+      } else{
+        setHAFont();
+        drawString(line1X, 0, line1, RIGHT);
+      }
     }
 
     // Строка 2: сенсоры 3 и 4
@@ -478,16 +489,17 @@ void DisplayGeneralInfoSection() {
       line2 += String(ha_sensor4_name) + haValue4;
     }
 
-    int line2EndX = midX;   // если строки нет
+    // int line2EndX = midX;   // если строки нет
 
     if (line2.length() > 0) {
-      char* data = const_cast<char*>(line2.c_str());
-      int32_t x1, y1, w, h;
-      int32_t xx = midX, yy = 22;
-      get_text_bounds(&currentFont, data, &xx, &yy, &x1, &y1, &w, &h, NULL);
+      // char* data = const_cast<char*>(line2.c_str());
+      // int32_t x1, y1, w, h;
+      // int32_t xx = midX, yy = 22;
+      // get_text_bounds(&currentFont, data, &xx, &yy, &x1, &y1, &w, &h, NULL);
 
-      line2EndX = midX + w / 2;   // конец второй строки
-      drawString(midX, 32, line2, CENTER);   // чуть ниже
+      // line2EndX = midX + w / 2;   // конец второй строки
+      // drawString(midX, 32, line2, CENTER);   // чуть ниже
+      drawString(line1X, 32, line2, RIGHT);   // чуть ниже
     }
 
     // Строка 3: сенсоры 5 и 6
@@ -499,13 +511,14 @@ void DisplayGeneralInfoSection() {
     }
 
     if (line3.length() > 0) {
-      drawString((line2EndX + 905) / 2, 32, line3, CENTER);   // чуть ниже
+      // drawString((line2EndX + 905) / 2, 32, line3, CENTER);   // чуть ниже
+      drawString(dateStart, 32, line3, LEFT);   // чуть ниже
     }
   }
 
   // Дата
-  setFont(OpenSans8B);
-  drawString(dateStart, 2, Date_str + "  @   " + Time_str, LEFT);
+  setFont(OpenSans10B);
+  drawString(dateStart, 0, Date_str + ", " + Time_str, LEFT);
 }
 
 void DisplayWeatherIcon(int x, int y) {
