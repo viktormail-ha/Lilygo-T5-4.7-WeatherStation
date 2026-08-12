@@ -59,9 +59,9 @@ const int ha_font = 10;                                    // Use 8, 10, or 12 w
 
 // Line 1: sensors 1 and 2
 // Sensor 1
-const int   ha_sensor1_on    = 1;                          // 1 = use the sensor for display, otherwise disabled (by default it is disabled)
-const char* ha_sensor1       = "sensor.xerox_workcentre_6025_magenta_toner_cartridge"; // Specify the sensor ID from HA whose value will be shown on the display (in this example, the printer's magenta toner cartridge)
-const char* ha_sensor1_name  = "Magenta: ";                // Specify the sensor name to be shown on the display; keep ": " at the end (in this example, "Magenta: "). Use short names
+const int   ha_sensor1_on    = 1;                          // 1 = use the sensor for display, otherwise disabled
+const char* ha_sensor1       = "sensor.xerox_workcentre_6025_magenta_toner_cartridge"; // Specify the sensor ID from Home Assistant whose value will be shown on the display (in this example, the printer's magenta toner cartridge)
+const char* ha_sensor1_name  = "Magenta: ";                // Specify the sensor name to be shown on the display; it is recomended to keep ": " at the end (in this example, "Magenta: "). Use short names
 const int   ha_sensor1_round = 0;                          // Round the sensor value to this many decimal places (0 = integer)
 
 // Sensor 2
