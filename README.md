@@ -14,6 +14,9 @@ This project works with LilyGO T5 4.7 inch e-paper (E-Ink) EPD display and [Open
 | --------------------------------------------------------------- | ------------------------------------------------------------------ |
 | <img src="assets/Original.jpg" width="420"><br>Original version | <img src="assets/Modified.jpg" width="420"><br>My modified version |
 
+## ⚠️ Note
+This code has not been fully tested and may contain bugs or unexpected behavior. Use it at your own risk.
+
 ## Key Features & Improvements
 
 This repository is a fork of:
