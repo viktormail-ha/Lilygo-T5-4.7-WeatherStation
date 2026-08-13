@@ -1,20 +1,20 @@
 // Change to your WiFi credentials
-const char* ssid     = "SSID";
-const char* password = "Password";
+const char* ssid        = "SSID";                          // Specify your Wi-Fi SSID here
+const char* password    = "Password";                      // Specify your Wi-Fi PASSWORD here
 
 // Use your own API key by signing up for a free developer account at https://openweathermap.org/
-String apikey       = "APKIKEY";
-const char server[] = "api.openweathermap.org";
+String apikey           = "APKIKEY";                       // Specify your API KEY here
+const char server[]     = "api.openweathermap.org";
 //http://api.openweathermap.org/data/2.5/forecast?q=Melksham,UK&APPID=your_OWM_API_key&mode=json&units=metric&cnt=40
 //http://api.openweathermap.org/data/2.5/weather?q=Melksham,UK&APPID=your_OWM_API_key&mode=json&units=metric&cnt=1
 
 //Set your location according to OWM locations
-String City             = "Moscow,RU";                     // Your home city See: http://bulk.openweathermap.org/sample/
-String Latitude         = "55.834217";                     // Latitude of your location in decimal degrees
-String Longitude        = "37.623014";                     // Longitude of your location in decimal degrees
-String Language         = "en";                            // NOTE: Only the weather description is translated by OWM
+String City             = "Moscow,RU";                     // Your home city See: http://bulk.openweathermap.org/sample/. Specify it in your language
+String Latitude         = "54.834217";                     // Latitude of your location in decimal degrees. As an option, you can use Google Maps to find the coordinates 
+String Longitude        = "38.642207";                     // Longitude of your location in decimal degrees. As an option, you can use Google Maps to find the coordinates
+String Language         = "en";                            // NOTE: Only the weather description is translated by OWM. For the rest of the translations, use the lang file and specify the selected file below
                                                            // Examples: German (DE) Arabic (AR) Czech (CZ) English (EN) Greek (EL) Persian(Farsi) (FA) Galician (GL) Hungarian (HU) Japanese (JA)
-                                                           // Korean (KR) Latvian (LA) Lithuanian (LT) Macedonian (MK) Slovak (SK) Slovenian (SL) Vietnamese (VI)
+                                                           // Korean (KR) Latvian (LA) Lithuanian (LT) Macedonian (MK) Slovak (SK) Slovenian (SL) Vietnamese (VI) Russian (RU)
 String Hemisphere       = "north";                         // or "south"  
 String Units            = "R";                             // Use "R" for Metric and pressure in mmHg, use "M" for Metric and pressure in hPa, use "I" for Imperial 
 const char* Timezone    = "MSK-3";                         // Choose your time zone from: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv 
@@ -32,7 +32,7 @@ const int max_readings  = 40;                              // 5-days (40 hours) 
 
 
 // ====================== MOON SECTION ======================
-// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ShowMoonPosition, ShowMoonEventSection, ShowMoonLatVisible to zero).
+// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ShowMoonPosition to zero).
 
 // Show the Moon's position relative to the horizon
 const int ShowMoonPosition = 1;                            // 1 = show the triangle indicating the Moon's position relative to the horizon in the Moon phase section
@@ -53,11 +53,11 @@ const int  ha_data   = 0;                                  // 1 = use HA, otherw
 const char* ha_host  = "192.168.1.150";                    // Change to your Home Assistant IP address
 const int   ha_port  = 8123;                               // Specify the Home Assistant port (default: 8123)
 // Create a Long-Lived Access Token in HA (Profile → Long-Lived Access Tokens → Create Token), do not use my token (it is just for example):
-const char* ha_token = "eyJhbGchgndyKU71NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI1ZJF8NhbvlIbzMDI0YjM1YmIyNzY1MDM3ZjBynrLvo74bGFlhdCI6MTc4NjQzMjQ5MCwiZXhwIjoyMTAxNzkyNDkwfQ.AZlKs-ca6dz_Xxe6o7Celxl1Pf_cCnRBQ576ro5fUCM";
+const char* ha_token = "eyJhbGhkfdsudU71Nfdshkjfhd6IkpXcxCJ9.eyJpc3MiOiI1ZJF8NhbvlIbzMDI0YjM1YmIyNzY1MDM3ZjBynrLvo74bGFlhdCI6MTc4NjQzMjQ5MCwiZXhwIjoyMTAxNzkyNDkwfQ.AZlKs-ca6dz_Xxe6o7Celxl1Pf_cCnRBQ576ro5fUCM";
 
 // Font size for Home Assistant sensor lines
 const int ha_font = 10;                                    // Use 8, 10, or 12 when using 2 or 3 lines (3–6 sensors); 10 usually looks best
-                                                           // If you are using only one line (1–2 sensors with very short names, for example like this: "M: 47%; C: 13%"), you can try to set this to 18 or even to 24 for 1 sensor, for example like this: "M: 47%" (12 or 18 might be better in any case)
+                                                           // If you are using only one line (1–2 sensors with very short names, for example like this: "M: 47%; C: 13%" or "M: 47%"), you can try to set this to 18 or even to 24 (but I guess 12 or 18 might be better in that case)
 
 // Line 1: sensors 1 and 2
 // Sensor 1
@@ -100,18 +100,20 @@ const int   ha_sensor6_round = 1;
 
 
 // Example time zones
-//const char* Timezone = "MET-1METDST,M3.5.0/01,M10.5.0/02"; // Most of Europe
-//const char* Timezone = "CET-1CEST,M3.5.0,M10.5.0/3";       // Central Europe
-//const char* Timezone = "EST-2METDST,M3.5.0/01,M10.5.0/02"; // Most of Europe
-//const char* Timezone = "EST5EDT,M3.2.0,M11.1.0";           // EST USA  
-//const char* Timezone = "CST6CDT,M3.2.0,M11.1.0";           // CST USA
-//const char* Timezone = "MST7MDT,M4.1.0,M10.5.0";           // MST USA
-//const char* Timezone = "NZST-12NZDT,M9.5.0,M4.1.0/3";      // Auckland
-//const char* Timezone = "EET-2EEST,M3.5.5/0,M10.5.5/0";     // Asia
-//const char* Timezone = "ACST-9:30ACDT,M10.1.0,M4.1.0/3":   // Australia
-//const char* Timezone = "MSK-3":                            // Europe - Moscow
+// const char* Timezone = "MET-1METDST,M3.5.0/01,M10.5.0/02"; // Most of Europe
+// const char* Timezone = "CET-1CEST,M3.5.0,M10.5.0/3";       // Central Europe
+// const char* Timezone = "EST-2METDST,M3.5.0/01,M10.5.0/02"; // Most of Europe
+// const char* Timezone = "EST5EDT,M3.2.0,M11.1.0";           // EST USA  
+// const char* Timezone = "CST6CDT,M3.2.0,M11.1.0";           // CST USA
+// const char* Timezone = "MST7MDT,M4.1.0,M10.5.0";           // MST USA
+// const char* Timezone = "NZST-12NZDT,M9.5.0,M4.1.0/3";      // Auckland
+// const char* Timezone = "EET-2EEST,M3.5.5/0,M10.5.5/0";     // Asia
+// const char* Timezone = "ACST-9:30ACDT,M10.1.0,M4.1.0/3":   // Australia
+// const char* Timezone = "MSK-3":                            // Europe - Moscow
+// const char* Timezone = "<+05>-5"                           // Asia/Almaty
 
 // Select language to use or add your own translation
 #include "lang.h"
-//#include "lang_fr.h"
-//#include "lang_de.h"
+// #include "lang_ru.h"
+// #include "lang_fr.h"
+// #include "lang_de.h"
