@@ -48,7 +48,11 @@ Changes made in this fork:
 * Added support for displaying information from Home Assistant on the display. Data from up to 6 sensors can be displayed across 3 lines, with 2 sensors per line. The feature can be enabled and each sensor can be configured in `user_settings.h`. It is disabled by default. To connect to Home Assistant, you need to create a Long-Lived Access Token: Profile → Long-Lived Access Tokens → Create Token
 * Added support for displaying data in Cyrillic. Note: If you make any changes to the code, keep in mind that Cyrillic characters are available only in the 8, 10, and 12 font sizes. The 18 and 24 fonts do not include Cyrillic characters. For full Russian language support, select `#include "lang_ru.h"` and set: `String Language = "ru";` in user_settings.h 
 
-![Moon position indicator and Home Assistant sensors](assets/Changelog_20260812.jpg)
+### Changelog and Russian translate
+
+| Changelog                                                       | Russian translate                                                  |
+| --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| <img src="assets/Changelog_20260812.jpg" width="420"><br>English version | <img src="assets/Russian_Example.jpg" width="420"><br>Russian version |
 
 ## Compiling and flashing
 
