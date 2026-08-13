@@ -726,7 +726,7 @@ void DisplayVisiCCoverSection(int x, int y) {
   WindGust(cursor, y, WxConditions[0].Windgust);
 }
 
-void DisplayMoonEventSection(int x, int y, int day, int month, int year) {
+void DisplayMoonEventSection(int x, int y) {
   if (!ShowMoonEventSection && !ShowMoonLatVisible) return;
 
   setFont(OpenSans10B);
@@ -751,7 +751,6 @@ void DisplayMoonEventSection(int x, int y, int day, int month, int year) {
 
   addMoonIcon(x - 10, y + 20);
   drawString(x + 10, y, result, LEFT);
-  drawString(x + 10, y + 20, MoonPhase(day, month, year, Hemisphere), LEFT);
 }
 
 void DisplayForecastWeather(int x, int y, int index, int fwidth) {
@@ -778,14 +777,23 @@ void DisplayAstronomySection(int x, int y) {
   int month = now_utc->tm_mon + 1;
   int year  = now_utc->tm_year + 1900;
 
-  if (ShowMoonPosition == 1) {
+  bool showEvents = (ShowMoonEventSection == 1) || (ShowMoonLatVisible == 1);
+  bool expanded   = (ShowMoonPosition == 1) || showEvents;
+
+  if (expanded) {
     DrawMoonImage(x + 20, y);
     DrawMoon(x - 18, y - 38, 75, day, month, year, Hemisphere);
     drawString(x + 150, y + 20, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT);
     drawString(x + 150, y + 55, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
     DrawSunriseImage(x + 215, y);
     DrawSunsetImage(x + 215, y + 35);
-    DisplayMoonEventSection(x + 25, y + 87, day, month, year);
+
+    if (showEvents) {
+      DisplayMoonEventSection(x + 25, y + 87);
+      drawString(x + 35, y + 107, MoonPhase(day, month, year, Hemisphere), LEFT);
+    } else {
+      drawString(x + 25, y + 92, MoonPhase(day, month, year, Hemisphere), LEFT);
+    }
   } else {
     DrawMoonImage(x + 10, y + 23);
     DrawMoon(x - 28, y - 15, 75, day, month, year, Hemisphere);
