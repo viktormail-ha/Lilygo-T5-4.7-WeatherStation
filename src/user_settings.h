@@ -32,10 +32,10 @@ const int max_readings  = 40;                              // 5-days (40 hours) 
 
 
 // ====================== MOON SECTION ======================
-// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ShowMoonPosition to zero).
+// This option has not been thoroughly tested. If it behaves unexpectedly or is not required, it is recommended to disable it (set ShowMoonPosition, ShowMoonEventSection, ShowMoonLatVisible to zero).
 
 // Show the Moon's position relative to the horizon
-const int ShowMoonPosition = 1;                            // 1 = show the triangle indicating the Moon's position relative to the horizon in the Moon phase section
+const int ShowMoonPosition     = 1;                        // 1 = show the triangle indicating the Moon's position relative to the horizon in the Moon phase section
 
 // Moon event line under Visibility/Clouds
 const int ShowMoonEventSection = 1;                        // 1 = show the next Moon event (rise/set and time)
