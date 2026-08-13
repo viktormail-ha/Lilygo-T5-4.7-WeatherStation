@@ -49,6 +49,11 @@ const String TXT_WNW = "WNW";
 const String TXT_NW  = "NW";
 const String TXT_NNW = "NNW";
 
+// Moon event
+const String TXT_MOON_RISE   = "Rise";   // Use short names
+const String TXT_MOON_SET    = "Set";    // Use short names
+const String TXT_MOON_ALT    = "Alt";    // Use short names
+
 // UV
 const String TXT_UV_LOW = "(L)";
 const String TXT_UV_MEDIUM = "(M)";
