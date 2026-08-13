@@ -341,7 +341,6 @@ String fetchHAState(WiFiClient & client, const char* entity_id, int roundDigits)
 
   String state;
   if (doc["state"].is<const char*>()) {
-    // Пробуем как число — чтобы округлить
     float f = atof(doc["state"].as<const char*>());
     if (f != 0.0f || doc["state"].as<String>() == "0") {
       state = String(f, roundDigits);
@@ -408,19 +407,76 @@ int JulianDate(int d, int m, int y) {
   return j;
 }
 
+int textWidth(const String& s) {
+  char* data = const_cast<char*>(s.c_str());
+  int32_t x1, y1, w, h;
+  int32_t xx = 0, yy = 0;
+  get_text_bounds(&currentFont, data, &xx, &yy, &x1, &y1, &w, &h, NULL);
+  return w;
+}
+
 float SumOfPrecip(float DataArray[], int readings) {
   float sum = 0;
   for (int i = 0; i < readings; i++) sum += DataArray[i];
   return sum;
 }
 
-String TitleCase(String text) {
-  if (text.length() > 0) {
-    String temp_text = text.substring(0, 1);
-    temp_text.toUpperCase();
-    return temp_text + text.substring(1); // Title-case the string
+int utf8CharLen(uint8_t c) {
+  if ((c & 0x80) == 0x00) return 1;
+  if ((c & 0xE0) == 0xC0) return 2;
+  if ((c & 0xF0) == 0xE0) return 3;
+  if ((c & 0xF8) == 0xF0) return 4;
+  return 1;
+}
+
+void utf8UpperFirst(const String& text, String& firstChar, String& rest) {
+  firstChar = "";
+  rest = "";
+  if (text.length() == 0) return;
+
+  int len = utf8CharLen((uint8_t)text[0]);
+  if (len > (int)text.length()) len = text.length();
+
+  firstChar = text.substring(0, len);
+  rest = text.substring(len);
+
+  // Латиница a-z
+  if (len == 1) {
+    char c = firstChar[0];
+    if (c >= 'a' && c <= 'z') firstChar.setCharAt(0, c - 32);
+    return;
   }
-  else return text;
+
+  // Кириллица UTF-8: 2 байта
+  if (len == 2) {
+    uint8_t b0 = (uint8_t)firstChar[0];
+    uint8_t b1 = (uint8_t)firstChar[1];
+    uint16_t cp = ((b0 & 0x1F) << 6) | (b1 & 0x3F);
+
+    // а-я (0x430-0x44F) → А-Я (0x410-0x42F)
+    if (cp >= 0x430 && cp <= 0x44F) {
+      cp -= 0x20;
+    }
+    // ё (0x451) → Ё (0x401)
+    else if (cp == 0x451) {
+      cp = 0x401;
+    }
+
+    // обратно в UTF-8
+    char out[3];
+    out[0] = (char)(0xC0 | (cp >> 6));
+    out[1] = (char)(0x80 | (cp & 0x3F));
+    out[2] = 0;
+    firstChar = String(out);
+  }
+}
+
+String TitleCase(String text) {
+  if (text.length() == 0) return text;
+
+  String first, rest;
+  utf8UpperFirst(text, first, rest);
+  return first + rest;
 }
 
 void DisplayWeather() {                          // 4.7" e-paper display is 960x540 resolution
@@ -429,7 +485,7 @@ void DisplayWeather() {                          // 4.7" e-paper display is 960x
   DisplayDisplayWindSection(137, 150, WxConditions[0].Winddir, WxConditions[0].Windspeed, 100);
   DisplayAstronomySection(5, 252);               // Astronomy section Sun rise/set, Moon phase and Moon icon
   DisplayMainWeatherSection(320, 110);           // Centre section of display for Location, temperature, Weather report, current Wx Symbol
-  DisplayWeatherIcon(835, 140);                  // Display weather icon scale = Large;
+  DisplayWeatherIcon(855, 140);                  // Display weather icon scale = Large;
   DisplayForecastSection(285, 220);              // 3hr forecast boxes
   DisplayGraphSection(320, 220);                 // Graphs of pressure, temperature, humidity and rain or snowfall
 }
@@ -448,7 +504,7 @@ void DisplayGeneralInfoSection() {
   setFont(OpenSans10B);
 
   int dateStart = 500;
-  int line1X    = 450;
+  int line1X    = 480;
 
   // City
   drawString(5, 0, City, LEFT);
@@ -456,7 +512,6 @@ void DisplayGeneralInfoSection() {
   // Home Assistant section
   if (ha_data == 1 && haAnySensorEnabled()) {
     
-
     // Строка 1: сенсоры 1 и 2
     String line1 = "";
     if (ha_sensor1_on == 1) line1 += String(ha_sensor1_name) + haValue1;
@@ -466,12 +521,7 @@ void DisplayGeneralInfoSection() {
     }
     if (line1.length() > 0) {
       if (haOnlyFirstLineEnabled()) {
-        char* cityData = const_cast<char*>(City.c_str());
-        int32_t x1, y1, w, h;
-        int32_t xx = 5, yy = 2;
-        get_text_bounds(&currentFont, cityData, &xx, &yy, &x1, &y1, &w, &h, NULL);
-
-        int cityEnd   = 5 + w;
+        int cityEnd   = 5 + textWidth(City);
         int line1X    = (cityEnd + dateStart) / 2;
         setHAFont();
         drawString(line1X, 0, line1, CENTER);
@@ -489,16 +539,7 @@ void DisplayGeneralInfoSection() {
       line2 += String(ha_sensor4_name) + haValue4;
     }
 
-    // int line2EndX = midX;   // если строки нет
-
     if (line2.length() > 0) {
-      // char* data = const_cast<char*>(line2.c_str());
-      // int32_t x1, y1, w, h;
-      // int32_t xx = midX, yy = 22;
-      // get_text_bounds(&currentFont, data, &xx, &yy, &x1, &y1, &w, &h, NULL);
-
-      // line2EndX = midX + w / 2;   // конец второй строки
-      // drawString(midX, 32, line2, CENTER);   // чуть ниже
       drawString(line1X, 32, line2, RIGHT);   // чуть ниже
     }
 
@@ -530,7 +571,6 @@ void DisplayMainWeatherSection(int x, int y) {
   DisplayTempHumiPressSection(x, y - 60);
 //  DisplayForecastTextSection(x - 55, y + 95);
   DisplayVisiCCoverSection(x, y + 55);
-  DisplayMoonEventSection(x - 15, y + 95); // Отображение времени следующего события и высоты над/под горизонтом для Луны 
   DisplayForecastTextSection(SCREEN_WIDTH - 35, y + 95);
 }
 
@@ -567,7 +607,7 @@ void DisplayDisplayWindSection(int x, int y, float angle, float windspeed, int C
   setFont(OpenSans24B);
   drawString(x + 3, y - 18, String(windspeed, 1), CENTER);
   setFont(OpenSans10B);
-  drawString(x, y + 25, (Units == "M" || Units == "R" ? "m/s" : "mph"), CENTER);
+  drawString(x, y + 25, (Units == "R" ? "м/с" : (Units == "M" ? "m/s" : "mph")), CENTER);
 }
 
 String WindDegToOrdinalDirection(float winddirection) {
@@ -599,15 +639,11 @@ void DisplayTempHumiPressSection(int x, int y) {
   } else {
     drawString(x - 30, y, tempHumi, LEFT);
   }
-  int char_width = 16;
-  int text_width = tempHumi.length() * char_width;
-  int pressX = (x - 30) + text_width + 30;
 
-  setFont(OpenSans24B);
   if (ha_data == 1 && haAnySensorEnabled()) {
-    DrawPressureAndTrend(pressX, y + 37, WxConditions[0].Pressure, WxConditions[0].Trend);
+    DrawPressureAndTrend(x + textWidth(tempHumi) - 70, y + 37, WxConditions[0].Pressure, WxConditions[0].Trend);
   } else {
-    DrawPressureAndTrend(pressX, y + 15, WxConditions[0].Pressure, WxConditions[0].Trend);
+    DrawPressureAndTrend(x + textWidth(tempHumi) - 70, y + 15, WxConditions[0].Pressure, WxConditions[0].Trend);
   }
 
   int Yoffset = 65;
@@ -630,24 +666,21 @@ void DisplayForecastTextSection(int x, int y) {
     p++;
     charCount++;
   }
-  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "M" || Units == "R" ? "mm" : "in") + ")";
+  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
   String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
   String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
   
   if (Line2.length() > 0 && Line1 != Line2) {
-    drawString(x, y, TitleCase(Line1 + ", " + Line2), RIGHT);
+    drawString(x, y, TitleCase(Line1 + " " + Line2), RIGHT);
   } else {
     drawString(x, y, TitleCase(Line1), RIGHT);
   }
 }
 
+
 void DisplayVisiCCoverSection(int x, int y) {
   setFont(OpenSans12B);
-
-  int char_width = 12;
-  int space_width = 50;
-  int unitXOffset = 0;
-  if (Units == "I") unitXOffset = 10; 
+  int space_width = 60;
   int cursor = x - 15;
 
   // Visibility
@@ -659,7 +692,16 @@ void DisplayVisiCCoverSection(int x, int y) {
           float vis_mi = WxConditions[0].Visibility / 1609.34f;
           visi = String(vis_mi, 1) + " mi";
       }
-  } else {
+  } else if (Units == "R") {
+      if (WxConditions[0].Visibility == 10000) {
+        visi = "10+ км";
+      } else if (WxConditions[0].Visibility < 1000) {
+        visi = String(WxConditions[0].Visibility) + " м";
+      } else {
+        float vis_km = WxConditions[0].Visibility / 1000.0f;
+        visi = String(vis_km, 1) + " км";
+      }
+} else {
       if (WxConditions[0].Visibility == 10000) {
           visi = "10+ km";
       } else if (WxConditions[0].Visibility < 1000) {
@@ -669,9 +711,8 @@ void DisplayVisiCCoverSection(int x, int y) {
           visi = String(vis_km, 1) + " km";
       }
   }
-  // String visi = String(WxConditions[0].Visibility) + " m" or " km" or " mi";
   Visibility(cursor, y, visi);
-  cursor += 30 + visi.length() * char_width + space_width - unitXOffset;
+  cursor += textWidth(visi) + space_width;
 
   // CloudCover
   int clouds = WxConditions[0].Cloudcover;
@@ -681,38 +722,36 @@ void DisplayVisiCCoverSection(int x, int y) {
   else if (clouds <= 60) PartlyCloudyCover(cursor, y, clouds);
   else if (clouds <= 85) MostlyCloudyCover(cursor, y, clouds);
   else CloudCover(cursor, y, clouds);
-  cursor += 20 + cloud.length() * char_width + space_width;
+  cursor += textWidth(cloud) + space_width;;
   WindGust(cursor, y, WxConditions[0].Windgust);
 }
 
-void DisplayMoonEventSection(int x, int y) {
+void DisplayMoonEventSection(int x, int y, int day, int month, int year) {
   if (!ShowMoonEventSection && !ShowMoonLatVisible) return;
-  setFont(OpenSans12B);
+
+  setFont(OpenSans10B);
   String result = "";
 
-  // 1. Ближайшее событие
   if (ShowMoonEventSection) {
-    result += getNextMoonEventStr();   // вернёт "set 17:10" или "rise 22:35" или "—"
+    result += getNextMoonEventStr();
   }
 
-  // 2. Высота
   if (ShowMoonLatVisible) {
-    String altStr = getMoonAltitudeStr(ShowMoonLatInvisible == 1);  // вернёт "59°" или "-12°" или ""
-    
+    String altStr = getMoonAltitudeStr(ShowMoonLatInvisible == 1);
     if (altStr.length() > 0) {
       if (result.length() > 0 && result != "—") {
-        result += ", alt " + altStr;           // "set 17:10, alt 59°"
+        result += ", " + String(TXT_MOON_ALT) + " " + altStr;
       } else {
-        result = "alt " + altStr;              // "alt 59°"
+        result = String(TXT_MOON_ALT) + " " + altStr;
       }
     }
   }
 
   if (result.length() == 0 || result == "—") return;
 
-  // Иконка + текст
-  addMoonIcon(x - 5, y + 8);
-  drawString(x + 18, y, result, LEFT);
+  addMoonIcon(x - 10, y + 20);
+  drawString(x + 10, y, result, LEFT);
+  drawString(x + 10, y + 20, MoonPhase(day, month, year, Hemisphere), LEFT);
 }
 
 void DisplayForecastWeather(int x, int y, int index, int fwidth) {
@@ -732,20 +771,30 @@ double NormalizedMoonPhase(int d, int m, int y) {
 
 void DisplayAstronomySection(int x, int y) {
   setFont(OpenSans10B);
+
   time_t now = time(NULL);
-  struct tm * now_utc  = gmtime(&now);
-  drawString(x + 5, y + 102, MoonPhase(now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere), LEFT);
-  if (ShowMoonPosition == 1) { // Небольшой сдвиг изображения Луны, чтобы вмещался индикатор положения Луны над/под горизонтом
-    DrawMoonImage(x + 20, y + 10); // Different references!
-    DrawMoon(x - 18, y - 28, 75, now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere); // Spaced at 1/2 moon size, so 10 - 75/2 = -28
+  struct tm *now_utc = gmtime(&now);
+  int day   = now_utc->tm_mday;
+  int month = now_utc->tm_mon + 1;
+  int year  = now_utc->tm_year + 1900;
+
+  if (ShowMoonPosition == 1) {
+    DrawMoonImage(x + 20, y);
+    DrawMoon(x - 18, y - 38, 75, day, month, year, Hemisphere);
+    drawString(x + 150, y + 20, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT);
+    drawString(x + 150, y + 55, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
+    DrawSunriseImage(x + 215, y);
+    DrawSunsetImage(x + 215, y + 35);
+    DisplayMoonEventSection(x + 25, y + 87, day, month, year);
   } else {
-    DrawMoonImage(x + 10, y + 23); // Different references!
-    DrawMoon(x - 28, y - 15, 75, now_utc->tm_mday, now_utc->tm_mon + 1, now_utc->tm_year + 1900, Hemisphere); // Spaced at 1/2 moon size, so 10 - 75/2 = -28
+    DrawMoonImage(x + 10, y + 23);
+    DrawMoon(x - 28, y - 15, 75, day, month, year, Hemisphere);
+    drawString(x + 130, y + 35, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT);
+    drawString(x + 130, y + 75, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
+    DrawSunriseImage(x + 195, y + 15);
+    DrawSunsetImage(x + 195, y + 55);
+    drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
   }
-  drawString(x + 130, y + 35, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT); // Sunrise
-  drawString(x + 130, y + 75, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);  // Sunset
-  DrawSunriseImage(x + 195, y + 15);
-  DrawSunsetImage(x + 195, y + 55);
 }
 
 
@@ -857,8 +906,7 @@ void getMoonProgress(time_t now, float lat, float lon, float &progress, float &a
   // Serial.printf("prev=%ld  next=%ld  dur=%.0f\n", prevCross, nextCross, dur);
 }
 
-// Функция, которая находит ближайшее событие и возвращает строку
-
+// Находит ближайшее событие и возвращает строку
 String getNextMoonEventStr() {
   time_t utc = time(NULL);
   float lat  = Latitude.toFloat();
@@ -890,15 +938,13 @@ String getNextMoonEventStr() {
 
   if (nextEvent == 0) return "—";          // полярный случай
 
-  // Время в локальном формате ЧЧ:ММ
   String timeStr = ConvertUnixTime(nextEvent).substring(0, 5);
 
-  if (isRise) return "rise " + timeStr;
-  else        return "set "  + timeStr;
+  if (isRise) return TXT_MOON_RISE + " " + timeStr;
+  else        return TXT_MOON_SET  + " " + timeStr;
 }
 
-// Функция, которая находит высоту Луны над/под горизонтом и возвращает строку
-
+// Находит высоту Луны над/под горизонтом и возвращает строку
 String getMoonAltitudeStr(bool allowInvisible) {
   time_t utc = time(NULL);
   float lat  = Latitude.toFloat();
@@ -951,7 +997,6 @@ void DrawMoon(int x, int y, int diameter, int dd, int mm, int yy, String hemisph
   drawCircle(x + diameter - 1, y + diameter, diameter / 2, Black);
   
   // Добавляем полоски горизонта и рисуем индикатор положения луны над/под горизонтом
-
   if (ShowMoonPosition == 1) {
 
     // Горизонтальные полоски горизонта (слева и справа от круга)
@@ -1115,28 +1160,6 @@ void DisplayGraphSection(int x, int y) {
           pressure_readings, max_readings, autoscale_on, barchart_off, NULL, false);
 }
 
-/*
-Доступные иконки Openweathermap:
-Иконка      ID                  Значение                                Расшифровка
-01d / 01n   800                 Clear sky                               800 clear sky (ясное небо)
-02d / 02n   801                 Few clouds                              801 few clowds (небольшая облачность)
-03d / 03n   802                 Scattered clouds                        802 scattered clouds (облачно с прояснениями)
-04d / 04n   803–804             Broken / Overcast clouds                803 broken clouds (облачно), 804 overcast clouds (сплошная облачность)
-09d / 09n   300–321             Drizzle (морось)                        300 light intensity drizzle, 301 drizzle, 302 heavy intensity drizzle, 
-                                                                        310	light intensity drizzle rain, 311	drizzle rain, 312	heavy intensity drizzle rain, 
-                                                                        313 shower rain and drizzle, 314 heavy shower rain and drizzle, 321 shower drizzle
-            520–531             Shower rain (ливневый дождь)            520 light intensity shower rain, 521 shower rain, 
-                                                                        522 heavy intensity shower rain, 531 ragged shower rain
-10d / 10n   500–504             Rain (дождь)                            500 light rain, 501 moderate rain, 502 heavy intensity rain, 503 very heavy rain, 504 extreme rain
-            511                 Freezing rain (ледяной дождь)           511 freezing rain
-11d / 11n   200–232             Thunderstorm (гроза)                    200 thunderstorm with light rain, 201 thunderstorm with rain, 202 thunderstorm with heavy rain, 
-                                                                        210 light thunderstorm, 211 thunderstorm, 212 heavy thunderstorm, 221 ragged thunderstorm, 
-                                                                        230 thunderstorm with light drizzle, 231 thunderstorm with drizzle, 232 thunderstorm with heavy drizzle
-13d / 13n   600–622             Snow + sleet (крупа) + rain/snow        600 light snow, 601 snow, 602 heavy snow, 611 sleet, 612 light shower sleet, 613 shower sleet, 
-                                                                        615 light rain and snow, 616 rain and snow, 620 light shower snow, 621 shower snow, 622 heavy shower snow
-50d / 50n   701–781             Mist, fog, haze, dust, sand, etc.       701 mist (дымка), 711 smoke (дым), 721 haze (мгла), 731 sand/dust whirls, 741 fog (туман), 
-                                                                        751 sand (песок), 761 dust (пыль), 762 volcanic ash, 771 squalls (шквалы), 781 tornado (торнадо)
-*/
 
 void DisplayConditionsSection(int x, int y, String IconName, int Id, bool IconSize) {
   Serial.println("Icon name: " + IconName);
@@ -1225,9 +1248,9 @@ void DrawPressureAndTrend(int x, int y, float pressure, String slope) {
   // --- Единицы ---
   setFont(OpenSans8B);
   String unitStr =
-      Units == "R" ? "mmHg" :
-      Units == "M" ? "hPa"  :
-                     "inHg";
+    Units == "R" ? (Language.equalsIgnoreCase("ru") ? "мм рт.ст" : "mmHg") :
+    Units == "M" ? "hPa" :
+                   "inHg";
   int unitYOffset = 0;
   if (Units == "M") unitYOffset = 5; 
   int unitXOffset = 30;
@@ -1882,7 +1905,7 @@ void WindGust(int x, int y, float Windgust) {
   int unitYOffset = 0;
   if (Units == "I") unitYOffset = 7;
   drawString(x + 25, y - unitYOffset, String(Windgust, 1) + " " +
-              (Units == "R" || Units == "M" ? "m/s" : "mph"), LEFT);
+              (Units == "R" ? "м/с" : (Units == "M" ? "m/s" : "mph")), LEFT);
 }
 
 // ################# MOON SECTION ###########################################
@@ -1909,7 +1932,7 @@ void DrawSunsetImage(int x, int y) {
 }
 
 void addMoonIcon(int x, int y) {
-  int r = 8;
+  int r = 14;
   fillCircle(x, y, r, Black);
   fillCircle(x + 4, y - 1, r - 1, White);
   drawCircle(x, y, r, Black);
