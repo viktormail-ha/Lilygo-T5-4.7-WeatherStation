@@ -53,11 +53,12 @@ const int  ha_data   = 0;                                  // 1 = use HA, otherw
 const char* ha_host  = "192.168.1.150";                    // Change to your Home Assistant IP address
 const int   ha_port  = 8123;                               // Specify the Home Assistant port (default: 8123)
 // Create a Long-Lived Access Token in HA (Profile → Long-Lived Access Tokens → Create Token), do not use my token (it is just for example):
-const char* ha_token = "eyJhbGhkfdsudU71Nfdshkjfhd6IkpXcxCJ9.eyJpc3MiOiI1ZJF8NhbvlIbzMDI0YjM1YmIyNzY1MDM3ZjBynrLvo74bGFlhdCI6MTc4NjQzMjQ5MCwiZXhwIjoyMTAxNzkyNDkwfQ.AZlKs-ca6dz_Xxe6o7Celxl1Pf_cCnRBQ576ro5fUCM";
+const char* ha_token = "eyJhGhkfdsudU71Nfdshkjfhd6IkpXcxCJ9.eyJpc3MiOiI1ZJF8NhbvlIbzMDI0YjM1YmIyNzY1MD3ZjBynrLvo7...oyMTAxNzkyNDkwfQ.AZlKs-ca6dz_Xxe6o7Celxl1Pf_cCnRBQ576ro5fUCM";
 
 // Font size for Home Assistant sensor lines
 const int ha_font = 10;                                    // Use 8, 10, or 12 when using 2 or 3 lines (3–6 sensors); 10 usually looks best
                                                            // If you are using only one line (1–2 sensors with very short names, for example like this: "M: 47%; C: 13%" or "M: 47%"), you can try to set this to 18 or even to 24 (but I guess 12 or 18 might be better in that case)
+                                                           // The 18 and 24 fonts do not include Cyrillic characters
 
 // Line 1: sensors 1 and 2
 // Sensor 1
@@ -98,6 +99,21 @@ const char* ha_sensor6       = "sensor.thb2_b76f_humidity";
 const char* ha_sensor6_name  = "Hum: ";
 const int   ha_sensor6_round = 1;
 
+// ====================== HOME ASSISTANT SENSOR 7 SECTION ======================
+// Line 4: This is the same line where the weather description is displayed,
+// so it is recommended to use only one sensor here, preferably without a name,
+// because the weather description can be quite long.
+
+// Sensor 7
+const int   ha_sensor7_font  = 24;                            // Set font size for Sensor 7 here. 24 usually looks best for a single sensor without a name on this line (Cyrillic characters are not supported)
+                                                              // You can also try 8, 10, 12, or 18, but in that case you will need to adjust
+                                                              // the position of sensor 7 in the .ino file.
+
+const int   ha_sensor7_on    = 1;                             // 1 = use the sensor for display, otherwise disabled
+const char* ha_sensor7       = "sensor.thb2_b76f_temperature";// Specify the sensor ID from Home Assistant whose value will be shown on the display
+const char* ha_sensor7_name  = "";                            // Specify the sensor name to be shown on the display; it is recomended to stay it empty (for Sensor 7)
+const int   ha_sensor7_round = 1;                             // Round the sensor value to this many decimal places (0 = integer)
+
 
 // Example time zones
 // const char* Timezone = "MET-1METDST,M3.5.0/01,M10.5.0/02"; // Most of Europe
@@ -108,9 +124,9 @@ const int   ha_sensor6_round = 1;
 // const char* Timezone = "MST7MDT,M4.1.0,M10.5.0";           // MST USA
 // const char* Timezone = "NZST-12NZDT,M9.5.0,M4.1.0/3";      // Auckland
 // const char* Timezone = "EET-2EEST,M3.5.5/0,M10.5.5/0";     // Asia
-// const char* Timezone = "ACST-9:30ACDT,M10.1.0,M4.1.0/3":   // Australia
-// const char* Timezone = "MSK-3":                            // Europe - Moscow
-// const char* Timezone = "<+05>-5"                           // Asia/Almaty
+// const char* Timezone = "ACST-9:30ACDT,M10.1.0,M4.1.0/3";   // Australia
+// const char* Timezone = "MSK-3";                            // Europe - Moscow
+// const char* Timezone = "<+05>-5";                          // Asia/Almaty
 
 // Select language to use or add your own translation
 #include "lang.h"
