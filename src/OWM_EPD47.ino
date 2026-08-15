@@ -733,30 +733,45 @@ void DisplayHASensor7Section(int x, int y) {
   }
 }
 
-void DisplayForecastTextSection(int x, int y) {
-#define lineWidth 34
-  setFont(OpenSans12B);
-  String Wx_Description = WxConditions[0].Forecast0;
-  Wx_Description.replace(".", ""); // remove any '.'
-  int spaceRemaining = 0, p = 0, charCount = 0, Width = lineWidth;
-  while (p < Wx_Description.length()) {
-    if (Wx_Description.substring(p, p + 1) == " ") spaceRemaining = p;
-    if (charCount > Width - 1) { // '~' is the end of line marker
-      Wx_Description = Wx_Description.substring(0, spaceRemaining) + "~" + Wx_Description.substring(spaceRemaining + 1);
-      charCount = 0;
-    }
-    p++;
-    charCount++;
-  }
-  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
-  String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
-  String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
+// void DisplayForecastTextSection(int x, int y) {
+// #define lineWidth 34
+//   setFont(OpenSans12B);
+//   String Wx_Description = WxConditions[0].Forecast0;
+//   Wx_Description.replace(".", ""); // remove any '.'
+//   int spaceRemaining = 0, p = 0, charCount = 0, Width = lineWidth;
+//   while (p < Wx_Description.length()) {
+//     if (Wx_Description.substring(p, p + 1) == " ") spaceRemaining = p;
+//     if (charCount > Width - 1) { // '~' is the end of line marker
+//       Wx_Description = Wx_Description.substring(0, spaceRemaining) + "~" + Wx_Description.substring(spaceRemaining + 1);
+//       charCount = 0;
+//     }
+//     p++;
+//     charCount++;
+//   }
+//   if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
+//   String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
+//   String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
   
-  if (Line2.length() > 0 && Line1 != Line2) {
-    drawString(x, y, TitleCase(Line1 + " " + Line2), RIGHT);
-  } else {
-    drawString(x, y, TitleCase(Line1), RIGHT);
+//   if (Line2.length() > 0 && Line1 != Line2) {
+//     drawString(x, y, TitleCase(Line1 + " " + Line2), RIGHT);
+//   } else {
+//     drawString(x, y, TitleCase(Line1), RIGHT);
+//   }
+// }
+
+
+void DisplayForecastTextSection(int x, int y) {
+  setFont(OpenSans12B);
+
+  String Wx_Description = WxConditions[0].Forecast0;
+  Wx_Description.replace(".", "");  // убрать точки
+
+  if (WxForecast[0].Rainfall > 0) {
+    Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) +
+                      String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
   }
+
+  drawString(x, y, TitleCase(Wx_Description), RIGHT);
 }
 
 void DisplayMoonEventSection(int x, int y) {
