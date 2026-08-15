@@ -46,7 +46,8 @@ Changes made in this fork:
 * Added a **Moon position indicator** showing whether the Moon is above or below the horizon. See the image below. If the indicator does not work correctly in your case, it can be disabled in `user_settings.h` by setting: `ShowMoonPosition = 0`
 * Added a **Moon event line** showing the time of the next Moon horizon crossing (rise or set) and the Moon's altitude (alt) above or below the horizon. See the image below. This information can be configured in `user_settings.h` using the following settings: `ShowMoonEventSection = 0` disables the display of the time of the next Moon horizon crossing; `ShowMoonLatVisible = 0` disables the display of the Moon's altitude. If `ShowMoonLatVisible = 1`, you can also choose not to display the Moon's altitude when the Moon is below the horizon by setting: `ShowMoonLatInvisible = 0`
 * Added support for displaying information from **Home Assistant** on the display. Data from up to 7 sensors can be displayed across 4 lines, with 1 or 2 sensors per line. The feature can be enabled and each sensor can be configured in `user_settings.h`. It is disabled by default. To connect to Home Assistant, you need to create a Long-Lived Access Token: Profile → Long-Lived Access Tokens → Create Token
-* Added support for displaying data in **Cyrillic**. Note: If you make any changes to the code, keep in mind that Cyrillic characters are available only in the 8, 10, and 12 font sizes. The 18 and 24 fonts do not include Cyrillic characters. For full Russian language support, select `#include "lang_ru.h"` and set: `String Language = "ru";` in user_settings.h 
+* Added support for displaying data in **Cyrillic**. Note: If you make any changes to the code, keep in mind that Cyrillic characters are available only in the 8, 10, and 12 font sizes. The 18 and 24 fonts do not include Cyrillic characters. For full Russian language support, select `#include "lang_ru.h"` and set: `String Language = "ru";` in user_settings.h
+* **ESP32-S3** support: Added changes intended to support the newer LilyGO ESP32-S3 boards (with 3 buttons). It is unclear whether the original firmware supported these boards. This change has not been tested, as I don't have an ESP32-S3 board available.
 
 ### Changelog and Russian translate
 
@@ -68,7 +69,7 @@ To compile you will need following libraries.
 4. Open src/user_settings.h in Visual Studio Code, enter or update your WiFi credentials, OpenWeatherMap API key, location, and other settings, then save the file.
 5. Check the language file selected in user_settings.h (e.g., lang_en.h, lang_de.h, or lang_fr.h in the src folder) and adjust the translation if necessary.
 6. If needed, open src/OWM_EPD47.ino in Visual Studio Code and modify the weather update schedule in lines 50-55 (by default, the weather is updated every 30 minutes, and the device enters sleep mode daily from 03:00 to 06:00)
-7. Open platformio.ini file and specify which LilyGO board you are using: **esp32** — for the older board (with 5 buttons) or **esp32s3** — for the newer board (with 3 buttons). I don't have the newer LilyGO ESP32-S3 version, so this configuration has not been tested. Use it at your own risk.
+7. Open platformio.ini file, find the `default_envs` line and specify which LilyGO board you are using: set `esp32` — for the older board (with 5 buttons), set `esp32s3` — for the newer board (with 3 buttons). I don't have the newer LilyGO ESP32-S3 version, so this configuration has not been tested. Use it at your own risk. Note: esp32 (old version) is selected by default.
 8. Press **Build** (checkmark icon) to compile the firmware.
 9. Press **Upload** (right arrow icon) to flash the device.
 10. Wait for the upload to finish and the device will start automatically.
