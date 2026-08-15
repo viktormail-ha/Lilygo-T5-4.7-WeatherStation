@@ -43,15 +43,18 @@ String haValue3 = "—";
 String haValue4 = "—";
 String haValue5 = "—";
 String haValue6 = "—";
+String haValue7 = "—";
 bool haAnySensorEnabled() {
   return (ha_sensor1_on == 1) || (ha_sensor2_on == 1) ||
          (ha_sensor3_on == 1) || (ha_sensor4_on == 1) ||
-         (ha_sensor5_on == 1) || (ha_sensor6_on == 1);
+         (ha_sensor5_on == 1) || (ha_sensor6_on == 1) ||
+         (ha_sensor7_on == 1);
 }
 bool haOnlyFirstLineEnabled() {
   return (ha_sensor3_on != 1) && (ha_sensor4_on != 1) &&
          (ha_sensor5_on != 1) && (ha_sensor6_on != 1);
 }
+bool showEvents = (ShowMoonEventSection == 1) || (ShowMoonLatVisible == 1);
 
 int     wifi_signal, CurrentHour = 0, CurrentMin = 0, CurrentSec = 0, EventCnt = 0, vref = 1100;
 //################ PROGRAM VARIABLES and OBJECTS ##########################################
@@ -370,6 +373,7 @@ bool obtainHomeAssistantData(WiFiClient & client) {
   if (ha_sensor4_on == 1) haValue4 = fetchHAState(client, ha_sensor4, ha_sensor4_round);
   if (ha_sensor5_on == 1) haValue5 = fetchHAState(client, ha_sensor5, ha_sensor5_round);
   if (ha_sensor6_on == 1) haValue6 = fetchHAState(client, ha_sensor6, ha_sensor6_round);
+  if (ha_sensor7_on == 1) haValue7 = fetchHAState(client, ha_sensor7, ha_sensor7_round);
 
   Serial.printf("HA: %s%s | %s%s | %s%s | %s%s\n",
                 ha_sensor1_name, haValue1.c_str(),
@@ -377,7 +381,8 @@ bool obtainHomeAssistantData(WiFiClient & client) {
                 ha_sensor3_name, haValue3.c_str(),
                 ha_sensor4_name, haValue4.c_str(),
                 ha_sensor5_name, haValue5.c_str(),
-                ha_sensor6_name, haValue6.c_str());
+                ha_sensor6_name, haValue6.c_str(),
+                ha_sensor7_name, haValue7.c_str());
   return true;
 }
 
@@ -499,6 +504,14 @@ void setHAFont() {
   else                    setFont(OpenSans8B);  // по умолчанию
 }
 
+void setHASensor7Font() {
+  if (ha_sensor7_font == 10)      setFont(OpenSans10B);
+  else if (ha_sensor7_font == 12) setFont(OpenSans12B);
+  else if (ha_sensor7_font == 18) setFont(OpenSans18B);
+  else if (ha_sensor7_font == 24) setFont(OpenSans24B);
+  else                            setFont(OpenSans8B);  // по умолчанию
+}
+
 
 void DisplayGeneralInfoSection() {
   setFont(OpenSans10B);
@@ -563,7 +576,11 @@ void DisplayGeneralInfoSection() {
 }
 
 void DisplayWeatherIcon(int x, int y) {
-  DisplayConditionsSection(x, y - 10, WxConditions[0].Icon, WxConditions[0].Id, LargeIcon);
+  int y_offset = 0;
+  if (showEvents) {
+    y_offset = 15;
+  }
+  DisplayConditionsSection(x, y - y_offset, WxConditions[0].Icon, WxConditions[0].Id, LargeIcon);
 }
 
 void DisplayMainWeatherSection(int x, int y) {
@@ -571,7 +588,14 @@ void DisplayMainWeatherSection(int x, int y) {
   DisplayTempHumiPressSection(x, y - 60);
 //  DisplayForecastTextSection(x - 55, y + 95);
   DisplayVisiCCoverSection(x, y + 55);
-  DisplayForecastTextSection(SCREEN_WIDTH - 35, y + 95);
+  if (showEvents) {
+    DisplayHASensor7Section(x, y + 95);
+    DisplayForecastTextSection(SCREEN_WIDTH - 20, y + 90);
+    DisplayMoonEventSection(SCREEN_WIDTH - 20, y + 120);
+  } else {
+    DisplayHASensor7Section(x, y + 90);
+    DisplayForecastTextSection(SCREEN_WIDTH - 20, y + 100);
+  }
 }
 
 void DisplayDisplayWindSection(int x, int y, float angle, float windspeed, int Cradius) {
@@ -651,33 +675,6 @@ void DisplayTempHumiPressSection(int x, int y) {
   drawString(x - 30, y + Yoffset, TXT_FEELSLIKE + String(WxConditions[0].FeelsLike, 1) + "°   " + TXT_HILO + String(WxConditions[0].High, 0) + "° | " + String(WxConditions[0].Low, 0) + "°", LEFT);
 }
 
-void DisplayForecastTextSection(int x, int y) {
-#define lineWidth 34
-  setFont(OpenSans12B);
-  String Wx_Description = WxConditions[0].Forecast0;
-  Wx_Description.replace(".", ""); // remove any '.'
-  int spaceRemaining = 0, p = 0, charCount = 0, Width = lineWidth;
-  while (p < Wx_Description.length()) {
-    if (Wx_Description.substring(p, p + 1) == " ") spaceRemaining = p;
-    if (charCount > Width - 1) { // '~' is the end of line marker
-      Wx_Description = Wx_Description.substring(0, spaceRemaining) + "~" + Wx_Description.substring(spaceRemaining + 1);
-      charCount = 0;
-    }
-    p++;
-    charCount++;
-  }
-  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
-  String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
-  String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
-  
-  if (Line2.length() > 0 && Line1 != Line2) {
-    drawString(x, y, TitleCase(Line1 + " " + Line2), RIGHT);
-  } else {
-    drawString(x, y, TitleCase(Line1), RIGHT);
-  }
-}
-
-
 void DisplayVisiCCoverSection(int x, int y) {
   setFont(OpenSans12B);
   int space_width = 60;
@@ -726,6 +723,42 @@ void DisplayVisiCCoverSection(int x, int y) {
   WindGust(cursor, y, WxConditions[0].Windgust);
 }
 
+void DisplayHASensor7Section(int x, int y) {
+  // Home Assistant section, Строка 4: сенсор 7
+  String line4 = "";
+  if (ha_sensor7_on == 1) line4 += String(ha_sensor7_name) + haValue7;
+  if (line4.length() > 0) {
+    setHASensor7Font();
+    drawString(x - 30, y, line4, LEFT);
+  }
+}
+
+void DisplayForecastTextSection(int x, int y) {
+#define lineWidth 34
+  setFont(OpenSans12B);
+  String Wx_Description = WxConditions[0].Forecast0;
+  Wx_Description.replace(".", ""); // remove any '.'
+  int spaceRemaining = 0, p = 0, charCount = 0, Width = lineWidth;
+  while (p < Wx_Description.length()) {
+    if (Wx_Description.substring(p, p + 1) == " ") spaceRemaining = p;
+    if (charCount > Width - 1) { // '~' is the end of line marker
+      Wx_Description = Wx_Description.substring(0, spaceRemaining) + "~" + Wx_Description.substring(spaceRemaining + 1);
+      charCount = 0;
+    }
+    p++;
+    charCount++;
+  }
+  if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
+  String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
+  String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
+  
+  if (Line2.length() > 0 && Line1 != Line2) {
+    drawString(x, y, TitleCase(Line1 + " " + Line2), RIGHT);
+  } else {
+    drawString(x, y, TitleCase(Line1), RIGHT);
+  }
+}
+
 void DisplayMoonEventSection(int x, int y) {
   if (!ShowMoonEventSection && !ShowMoonLatVisible) return;
 
@@ -749,16 +782,20 @@ void DisplayMoonEventSection(int x, int y) {
 
   if (result.length() == 0 || result == "—") return;
 
-  addMoonIcon(x - 10, y + 20);
-  drawString(x + 10, y, result, LEFT);
+  addMoonIcon(x - 10, y + 12);
+  drawString(x - 30, y, result, RIGHT);
 }
 
 void DisplayForecastWeather(int x, int y, int index, int fwidth) {
-  x = x + fwidth * index;
-  DisplayConditionsSection(x + fwidth / 2 - 5, y + 85, WxForecast[index].Icon, WxForecast[index].Id, SmallIcon);
+  x = x + fwidth * index + 15;
+  int y_offset = 0;
+  if (showEvents) {
+    y_offset = 12;
+  }
+  DisplayConditionsSection(x + fwidth / 2 - 5, y + 85 + y_offset, WxForecast[index].Icon, WxForecast[index].Id, SmallIcon);
   setFont(OpenSans10B);
-  drawString(x + fwidth / 2, y + 30, String(ConvertUnixTime(WxForecast[index].Dt + WxConditions[0].FTimezone).substring(0, 5)), CENTER);
-  drawString(x + fwidth / 2, y + 130, String((WxForecast[index].High + WxForecast[index].Low) / 2, 0) + "°", CENTER);
+  drawString(x + fwidth / 2, y + 30 + y_offset, String(ConvertUnixTime(WxForecast[index].Dt + WxConditions[0].FTimezone).substring(0, 5)), CENTER);
+  drawString(x + fwidth / 2, y + 130 + y_offset, String((WxForecast[index].High + WxForecast[index].Low) / 2, 0) + "°", CENTER);
 }
 
 double NormalizedMoonPhase(int d, int m, int y) {
@@ -777,23 +814,24 @@ void DisplayAstronomySection(int x, int y) {
   int month = now_utc->tm_mon + 1;
   int year  = now_utc->tm_year + 1900;
 
-  bool showEvents = (ShowMoonEventSection == 1) || (ShowMoonLatVisible == 1);
-  bool expanded   = (ShowMoonPosition == 1) || showEvents;
+  // bool showEvents = (ShowMoonEventSection == 1) || (ShowMoonLatVisible == 1);
+  // bool expanded   = (ShowMoonPosition == 1) || showEvents;
+  if (ShowMoonPosition == 1) {
 
-  if (expanded) {
-    DrawMoonImage(x + 20, y);
-    DrawMoon(x - 18, y - 38, 75, day, month, year, Hemisphere);
-    drawString(x + 150, y + 20, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT);
-    drawString(x + 150, y + 55, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
-    DrawSunriseImage(x + 215, y);
-    DrawSunsetImage(x + 215, y + 35);
+  // if (expanded) {
+    DrawMoonImage(x + 20, y + 10);
+    DrawMoon(x - 18, y - 28, 75, day, month, year, Hemisphere);
+    drawString(x + 150, y + 25, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT);
+    drawString(x + 150, y + 65, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
+    DrawSunriseImage(x + 215, y + 10);
+    DrawSunsetImage(x + 215, y + 50);
 
-    if (showEvents) {
-      DisplayMoonEventSection(x + 25, y + 87);
-      drawString(x + 35, y + 107, MoonPhase(day, month, year, Hemisphere), LEFT);
-    } else {
-      drawString(x + 25, y + 92, MoonPhase(day, month, year, Hemisphere), LEFT);
-    }
+    // if (showEvents) {
+    //   DisplayMoonEventSection(x + 25, y + 87);
+    //   drawString(x + 35, y + 107, MoonPhase(day, month, year, Hemisphere), LEFT);
+    // } else {
+    // drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
+    // }
   } else {
     DrawMoonImage(x + 10, y + 23);
     DrawMoon(x - 28, y - 15, 75, day, month, year, Hemisphere);
@@ -801,8 +839,9 @@ void DisplayAstronomySection(int x, int y) {
     drawString(x + 130, y + 75, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
     DrawSunriseImage(x + 195, y + 15);
     DrawSunsetImage(x + 195, y + 55);
-    drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
+    // drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
   }
+  drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
 }
 
 
@@ -1940,7 +1979,7 @@ void DrawSunsetImage(int x, int y) {
 }
 
 void addMoonIcon(int x, int y) {
-  int r = 14;
+  int r = 8;
   fillCircle(x, y, r, Black);
   fillCircle(x + 4, y - 1, r - 1, White);
   drawCircle(x, y, r, Black);
