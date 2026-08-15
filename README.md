@@ -67,7 +67,7 @@ To compile you will need following libraries.
 2. Connect the LilyGO T5 4.7" to your PC via USB.
 3. Open main folder of this project in **Visual Studio Code** with the **PlatformIO** extension installed.
 4. Open src/user_settings.h in Visual Studio Code, enter or update your WiFi credentials, OpenWeatherMap API key, location, and other settings, then save the file.
-5. Check the language file selected in user_settings.h (e.g., lang_en.h, lang_de.h, or lang_fr.h in the src folder) and adjust the translation if necessary.
+5. Check the language file selected in user_settings.h (e.g., lang.h (English), lang_de.h, lang_fr.h or lang_ru.h in the src folder) and adjust the translation if necessary.
 6. If needed, open src/OWM_EPD47.ino in Visual Studio Code and modify the weather update schedule in lines 50-55 (by default, the weather is updated every 30 minutes, and the device enters sleep mode daily from 03:00 to 06:00)
 7. Open platformio.ini file, find the `default_envs` line and specify which LilyGO board you are using: set `esp32` — for the older board (with 5 buttons), set `esp32s3` — for the newer board (with 3 buttons). I don't have the newer LilyGO ESP32-S3 version, so this configuration has not been tested. Use it at your own risk. Note: esp32 (old version) is selected by default.
 8. Press **Build** (checkmark icon) to compile the firmware.
