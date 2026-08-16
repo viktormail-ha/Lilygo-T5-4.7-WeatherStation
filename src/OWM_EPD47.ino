@@ -631,7 +631,8 @@ void DisplayDisplayWindSection(int x, int y, float angle, float windspeed, int C
   setFont(OpenSans24B);
   drawString(x + 3, y - 18, String(windspeed, 1), CENTER);
   setFont(OpenSans10B);
-  drawString(x, y + 25, (Units == "R" ? "м/с" : (Units == "M" ? "m/s" : "mph")), CENTER);
+  // drawString(x, y + 25, (Units == "R" ? "м/с" : (Units == "M" ? "m/s" : "mph")), CENTER);
+  drawString(x, y + 25, (Language.equalsIgnoreCase("ru") ? ((Units == "R" || Units == "M") ? "м/с" : "миль/ч") : ((Units == "R" || Units == "M") ? "m/s" : "mph")), CENTER);
 }
 
 String WindDegToOrdinalDirection(float winddirection) {
@@ -683,22 +684,24 @@ void DisplayVisiCCoverSection(int x, int y) {
   // Visibility
   String visi;
   if (Units == "I") {
-      if (WxConditions[0].Visibility == 10000) {
-          visi = "10+ mi";
-      } else {
-          float vis_mi = WxConditions[0].Visibility / 1609.34f;
-          visi = String(vis_mi, 1) + " mi";
-      }
+    if (WxConditions[0].Visibility == 10000) {
+        visi = "10+ mi";
+    } else {
+        float vis_mi = WxConditions[0].Visibility / 1609.34f;
+        visi = String(vis_mi, 1) + " mi";
+    }
   } else if (Units == "R") {
-      if (WxConditions[0].Visibility == 10000) {
-        visi = "10+ км";
-      } else if (WxConditions[0].Visibility < 1000) {
-        visi = String(WxConditions[0].Visibility) + " м";
-      } else {
+    if (WxConditions[0].Visibility == 10000) {
+        visi = Language.equalsIgnoreCase("ru") ? "10+ км" : "10+ km";
+    } else if (WxConditions[0].Visibility < 1000) {
+        visi = String(WxConditions[0].Visibility) +
+               (Language.equalsIgnoreCase("ru") ? " м" : " m");
+    } else {
         float vis_km = WxConditions[0].Visibility / 1000.0f;
-        visi = String(vis_km, 1) + " км";
-      }
-} else {
+        visi = String(vis_km, 1) +
+               (Language.equalsIgnoreCase("ru") ? " км" : " km");
+    }
+  } else {
       if (WxConditions[0].Visibility == 10000) {
           visi = "10+ km";
       } else if (WxConditions[0].Visibility < 1000) {
@@ -768,7 +771,7 @@ void DisplayForecastTextSection(int x, int y) {
 
   if (WxForecast[0].Rainfall > 0) {
     Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) +
-                      String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
+                      String(Language.equalsIgnoreCase("ru") ? ((Units == "R" || Units == "M") ? "мм" : "дюйм") : ((Units == "R" || Units == "M") ? "mm" : "in")) + ")";
   }
 
   drawString(x, y, TitleCase(Wx_Description), RIGHT);
@@ -1331,7 +1334,8 @@ void DrawPressureAndTrend(int x, int y, float pressure, String slope) {
 }
 
 void DrawPressureMeasure(int x, int y, float pressure, String slope) {
-  drawString(x + 60, y + 20, (Units == "R" ? " mmHg" : (Units == "M" ? " hPa" : " inHg")), LEFT);
+  // drawString(x + 60, y + 20, (Units == "R" ? " mmHg" : (Units == "M" ? " hPa" : " inHg")), LEFT);
+  drawString(x + 60, y + 20, (Units == "R" ? (Language.equalsIgnoreCase("ru") ? " мм" : " mmHg") : Units == "M" ? " hPa" : " inHg"), LEFT);
 }
 
 void DisplayStatusSection(int x, int y, int rssi) {
@@ -1380,7 +1384,7 @@ boolean UpdateLocalTime() {
   else
   {
     strftime(day_output, sizeof(day_output), "%a %b-%d-%Y", &timeinfo); // Creates  'Sat May-31-2019'
-    strftime(update_time, sizeof(update_time), "%r", &timeinfo);        // Creates: '@ 02:05pm'
+    strftime(update_time, sizeof(update_time), "%I:%M %p", &timeinfo);        // Creates: '@ 02:05pm'
     sprintf(time_output, "%s", update_time);
   }
   Date_str = day_output;
@@ -1967,7 +1971,7 @@ void WindGust(int x, int y, float Windgust) {
   int unitYOffset = 0;
   if (Units == "I") unitYOffset = 7;
   drawString(x + 25, y - unitYOffset, String(Windgust, 1) + " " +
-              (Units == "R" ? "м/с" : (Units == "M" ? "m/s" : "mph")), LEFT);
+              (Language.equalsIgnoreCase("ru") ? ((Units == "R" || Units == "M") ? "м/с" : "миль/ч") : ((Units == "R" || Units == "M") ? "m/s" : "mph")), LEFT);
 }
 
 // ################# MOON SECTION ###########################################
