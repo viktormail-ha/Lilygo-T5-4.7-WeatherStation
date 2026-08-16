@@ -16,7 +16,7 @@ String Language         = "en";                            // NOTE: Only the wea
                                                            // Examples: German (DE) Arabic (AR) Czech (CZ) English (EN) Greek (EL) Persian(Farsi) (FA) Galician (GL) Hungarian (HU) Japanese (JA)
                                                            // Korean (KR) Latvian (LA) Lithuanian (LT) Macedonian (MK) Slovak (SK) Slovenian (SL) Vietnamese (VI) Russian (RU)
 String Hemisphere       = "north";                         // or "south"  
-String Units            = "R";                             // Use "R" for Metric and pressure in Cyrillic and "мм рт.ст", use "M" for Metric and pressure in hPa, use "I" for Imperial 
+String Units            = "R";                             // Use "R" for Metric and pressure in "mmHg", use "M" for Metric and pressure in hPa, use "I" for Imperial 
 const char* Timezone    = "MSK-3";                         // Choose your time zone from: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv 
                                                            // See below for examples
 const char* ntpServer   = "pool.ntp.org";                  // Or, choose a time server close to you, but in most cases it's best to use pool.ntp.org to find an NTP server
