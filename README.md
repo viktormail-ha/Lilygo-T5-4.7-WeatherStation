@@ -55,12 +55,6 @@ Changes made in this fork:
 | --------------------------------------------------------------- | ------------------------------------------------------------------ |
 | <img src="assets/Changelog_202608.jpg" width="420"><br>English version | <img src="assets/Russian_Example.jpg" width="420"><br>Russian version |
 
-## Compiling and flashing
-
-To compile you will need following libraries.
-- https://github.com/Xinyuan-LilyGO/LilyGo-EPD47
-- https://github.com/bblanchon/ArduinoJson  
-
 ## Quick Flash Instructions
 
 1. Download the firmware ZIP and extract it to a folder.
