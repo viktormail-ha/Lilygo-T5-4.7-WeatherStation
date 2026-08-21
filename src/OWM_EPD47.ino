@@ -339,7 +339,7 @@ String fetchHAState(WiFiClient & client, const char* entity_id, int roundDigits)
   String payload = http.getString();
   http.end();
 
-  DynamicJsonDocument doc(1024);
+  DynamicJsonDocument doc(2048);
   if (deserializeJson(doc, payload)) return "—";
 
   String state;
@@ -1400,7 +1400,8 @@ void DrawBattery(int x, int y) {
     Serial.printf("eFuse Vref:%u mV\n", adc_chars.vref);
     vref = adc_chars.vref;
   }
-  float voltage = analogRead(36) / 4096.0 * 6.566 * (vref / 1000.0);
+
+  float voltage = analogRead(BATT_PIN) / 4096.0 * 6.566 * (vref / 1000.0);
   if (voltage > 1 ) { // Only display if there is a valid reading
     Serial.println("\nVoltage = " + String(voltage));
     percentage = 2836.9625 * pow(voltage, 4) - 43987.4889 * pow(voltage, 3) + 255233.8134 * pow(voltage, 2) - 656689.7123 * voltage + 632041.7303;
