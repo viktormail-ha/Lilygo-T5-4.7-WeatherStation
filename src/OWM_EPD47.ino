@@ -353,7 +353,17 @@ String fetchHAState(WiFiClient & client, const char* entity_id, int roundDigits)
   } else if (doc["state"].is<float>() || doc["state"].is<int>()) {
     state = String(doc["state"].as<float>(), roundDigits);
   } else {
-    return "—";
+    return "NA";
+  }
+
+  String stateLower = state;
+  stateLower.toLowerCase();
+  if (state.length() == 0 ||
+      stateLower == "unavailable" ||
+      stateLower == "unknown" ||
+      stateLower == "none" ||
+      stateLower == "null") {
+    return "NA";
   }
 
   const char* unit = doc["attributes"]["unit_of_measurement"];
@@ -770,8 +780,8 @@ void DisplayForecastTextSection(int x, int y) {
   Wx_Description.replace(".", "");  // убрать точки
 
   if (WxForecast[0].Rainfall > 0) {
-    Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) +
-                      String(Language.equalsIgnoreCase("ru") ? ((Units == "R" || Units == "M") ? "мм" : "дюйм") : ((Units == "R" || Units == "M") ? "mm" : "in")) + ")";
+    Wx_Description += ", " + String(WxForecast[0].Rainfall, 1) +
+                      String(Language.equalsIgnoreCase("ru") ? ((Units == "R" || Units == "M") ? "мм" : "дюйм") : ((Units == "R" || Units == "M") ? "mm" : "in"));
   }
 
   drawString(x, y, TitleCase(Wx_Description), RIGHT);
@@ -1828,7 +1838,8 @@ void Mist(int x, int y, bool IconSize, String IconName) {
   int scale = Small, linesize = 5;
   if (IconName.endsWith("n")) addmoon(x, y, IconSize);
   if (IconSize == LargeIcon) scale = Large;
-  addsun(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  // addsun(x, y, scale * (IconSize ? 1 : 0.75), linesize);
+  addcloud(x, y, scale * 0.75, linesize);
   addfog(x, y, scale, linesize, IconSize);
 }
 
