@@ -49,6 +49,11 @@ Changes made in this fork:
 * Added support for displaying data in **Cyrillic**. Note: If you make any changes to the code, keep in mind that Cyrillic characters are available only in the 8, 10, and 12 font sizes. The 18 and 24 fonts do not include Cyrillic characters. For full Russian language support, select `#include "lang_ru.h"`, set: `String Language = "ru";` and set: `String Units = "R"` in user_settings.h
 * **ESP32-S3** support: Added changes intended to support the newer LilyGO ESP32-S3 boards (with 3 buttons). It is unclear whether the original firmware supported these boards. This change has not been tested, as I don't have an ESP32-S3 board available.
 
+### September 2026
+
+* Fixed an issue where Weather Informer could occasionally wake up twice within the same hour — for example, at the 28th and 30th minute. This has now been fixed.
+* Significantly reduced the number of computations related to the Moon phase and position. This should help reduce battery consumption.
+
 ### Changelog and Russian translate
 
 | Changelog                                                       | Russian translate                                                  |
