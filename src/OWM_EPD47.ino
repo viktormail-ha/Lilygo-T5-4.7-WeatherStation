@@ -91,12 +91,24 @@ uint8_t *framebuffer;
 void BeginSleep() {
   epd_poweroff_all();
   UpdateLocalTime();
-  SleepTimer = (SleepDuration * 60 - ((CurrentMin % SleepDuration) * 60 + CurrentSec)) + Delta; //Some ESP32 have a RTC that is too fast to maintain accurate time, so add an offset
-  esp_sleep_enable_timer_wakeup(SleepTimer * 1000000LL); // in Secs, 1000000LL converts to Secs as unit = 1uSec
+
+  long secondsToNext = SleepDuration * 60L
+                     - (CurrentMin % SleepDuration) * 60L
+                     - CurrentSec;
+
+  if (secondsToNext < 180) {          // меньше 3 минут
+    secondsToNext += SleepDuration * 60L;
+  }
+
+  SleepTimer = secondsToNext + Delta;
+
+  if (SleepTimer < 60) SleepTimer = SleepDuration * 60L;
+
+  esp_sleep_enable_timer_wakeup(SleepTimer * 1000000LL);
   Serial.println("Awake for : " + String((millis() - StartTime) / 1000.0, 3) + "-secs");
   Serial.println("Entering " + String(SleepTimer) + " (secs) of sleep time");
   Serial.println("Starting deep-sleep period...");
-  esp_deep_sleep_start();  // Sleep for e.g. 30 minutes
+  esp_deep_sleep_start();
 }
 
 boolean SetupTime() {
@@ -143,7 +155,9 @@ void StopWiFi() {
 void InitialiseSystem() {
   StartTime = millis();
   Serial.begin(115200);
-  while (!Serial);
+  unsigned long t0 = millis();
+  while (!Serial && millis() - t0 < 2000) { // ждём до 2 сек, потом идём дальше
+  }
   Serial.println(String(__FILE__) + "\nStarting...");
   epd_init();
   framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
@@ -385,7 +399,7 @@ bool obtainHomeAssistantData(WiFiClient & client) {
   if (ha_sensor6_on == 1) haValue6 = fetchHAState(client, ha_sensor6, ha_sensor6_round);
   if (ha_sensor7_on == 1) haValue7 = fetchHAState(client, ha_sensor7, ha_sensor7_round);
 
-  Serial.printf("HA: %s%s | %s%s | %s%s | %s%s\n",
+  Serial.printf("HA: %s%s | %s%s | %s%s | %s%s | %s%s | %s%s | %s%s\n",
                 ha_sensor1_name, haValue1.c_str(),
                 ha_sensor2_name, haValue2.c_str(),
                 ha_sensor3_name, haValue3.c_str(),
@@ -595,10 +609,9 @@ void DisplayWeatherIcon(int x, int y) {
 
 void DisplayMainWeatherSection(int x, int y) {
   setFont(OpenSans8B);
-  DisplayTempHumiPressSection(x, y - 60);
-//  DisplayForecastTextSection(x - 55, y + 95);
-  DisplayVisiCCoverSection(x, y + 55);
-  if (showEvents) {
+  DisplayTempHumiPressSection(x, y - 60);                       // Temperature, humidity, and pressure section
+  DisplayVisiCCoverSection(x, y + 55);                          // Visibility, cloud cover, and wind gusts section
+  if (showEvents) {                                             // HA Sensor 7, forecast text, and moon event section
     DisplayHASensor7Section(x, y + 95);
     DisplayForecastTextSection(SCREEN_WIDTH - 20, y + 90);
     DisplayMoonEventSection(SCREEN_WIDTH - 20, y + 120);
@@ -746,33 +759,6 @@ void DisplayHASensor7Section(int x, int y) {
   }
 }
 
-// void DisplayForecastTextSection(int x, int y) {
-// #define lineWidth 34
-//   setFont(OpenSans12B);
-//   String Wx_Description = WxConditions[0].Forecast0;
-//   Wx_Description.replace(".", ""); // remove any '.'
-//   int spaceRemaining = 0, p = 0, charCount = 0, Width = lineWidth;
-//   while (p < Wx_Description.length()) {
-//     if (Wx_Description.substring(p, p + 1) == " ") spaceRemaining = p;
-//     if (charCount > Width - 1) { // '~' is the end of line marker
-//       Wx_Description = Wx_Description.substring(0, spaceRemaining) + "~" + Wx_Description.substring(spaceRemaining + 1);
-//       charCount = 0;
-//     }
-//     p++;
-//     charCount++;
-//   }
-//   if (WxForecast[0].Rainfall > 0) Wx_Description += " (" + String(WxForecast[0].Rainfall, 1) + String(Units == "R" ? "мм" : (Units == "M" ? "mm" : "in")) + ")";
-//   String Line1 = Wx_Description.substring(0, Wx_Description.indexOf("~"));
-//   String Line2 = Wx_Description.substring(Wx_Description.indexOf("~") + 1);
-  
-//   if (Line2.length() > 0 && Line1 != Line2) {
-//     drawString(x, y, TitleCase(Line1 + " " + Line2), RIGHT);
-//   } else {
-//     drawString(x, y, TitleCase(Line1), RIGHT);
-//   }
-// }
-
-
 void DisplayForecastTextSection(int x, int y) {
   setFont(OpenSans12B);
 
@@ -810,8 +796,10 @@ void DisplayMoonEventSection(int x, int y) {
 
   if (result.length() == 0 || result == "—") return;
 
-  addMoonIcon(x - 10, y + 12);
-  drawString(x - 30, y, result, RIGHT);
+  int textW = textWidth(result);
+  int iconGap = 15;
+  drawString(x, y, result, RIGHT);
+  addMoonIcon(x - textW - iconGap, y + 12);
 }
 
 void DisplayForecastWeather(int x, int y, int index, int fwidth) {
@@ -842,11 +830,8 @@ void DisplayAstronomySection(int x, int y) {
   int month = now_utc->tm_mon + 1;
   int year  = now_utc->tm_year + 1900;
 
-  // bool showEvents = (ShowMoonEventSection == 1) || (ShowMoonLatVisible == 1);
-  // bool expanded   = (ShowMoonPosition == 1) || showEvents;
   if (ShowMoonPosition == 1) {
 
-  // if (expanded) {
     DrawMoonImage(x + 20, y + 10);
     DrawMoon(x - 18, y - 28, 75, day, month, year, Hemisphere);
     drawString(x + 150, y + 25, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, 5), LEFT);
@@ -854,12 +839,6 @@ void DisplayAstronomySection(int x, int y) {
     DrawSunriseImage(x + 215, y + 10);
     DrawSunsetImage(x + 215, y + 50);
 
-    // if (showEvents) {
-    //   DisplayMoonEventSection(x + 25, y + 87);
-    //   drawString(x + 35, y + 107, MoonPhase(day, month, year, Hemisphere), LEFT);
-    // } else {
-    // drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
-    // }
   } else {
     DrawMoonImage(x + 10, y + 23);
     DrawMoon(x - 28, y - 15, 75, day, month, year, Hemisphere);
@@ -867,7 +846,6 @@ void DisplayAstronomySection(int x, int y) {
     drawString(x + 130, y + 75, ConvertUnixTime(WxConditions[0].Sunset).substring(0, 5), LEFT);
     DrawSunriseImage(x + 195, y + 15);
     DrawSunsetImage(x + 195, y + 55);
-    // drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
   }
   drawString(x + 5, y + 102, MoonPhase(day, month, year, Hemisphere), LEFT);
 }
@@ -877,6 +855,9 @@ void DisplayAstronomySection(int x, int y) {
 
 const float DEG2RAD = PI / 180.0f;
 const float RAD2DEG = 180.0f / PI;
+
+const float MOON_OBLIQUITY_COS = 0.91748f; // cos(23.439°) — наклон эклиптики, не меняется
+const float MOON_OBLIQUITY_SIN = 0.39778f; // sin(23.439°)
 
 float toDays(time_t utc) {
   return (utc / 86400.0f) - 10957.5f;   // дни от J2000.0
@@ -890,8 +871,8 @@ void moonCoords(float d, float &ra, float &dec) {
   float lon = L + 6.289f * sinf(M * DEG2RAD);
   float lat = 5.128f * sinf(F * DEG2RAD);
 
-  float cosEps = cosf(23.439f * DEG2RAD);
-  float sinEps = sinf(23.439f * DEG2RAD);
+  float cosEps = MOON_OBLIQUITY_COS;
+  float sinEps = MOON_OBLIQUITY_SIN;
   float lonR = lon * DEG2RAD;
   float latR = lat * DEG2RAD;
 
@@ -914,6 +895,33 @@ float moonAltitude(time_t utc, float lat, float lon) {
   return asinf(constrain(sinAlt, -1.0f, 1.0f)) * RAD2DEG;
 }
 
+// ---- Кеш для moonAltitude() ----
+#define MOON_ALT_CACHE_SIZE 400
+struct MoonAltCacheEntry {
+  time_t t = 0;
+  float lat = 1000.0f;
+  float lon = 1000.0f;
+  float alt = 0.0f;
+  bool valid = false;
+};
+static MoonAltCacheEntry moonAltCache[MOON_ALT_CACHE_SIZE];
+
+float moonAltitudeCached(time_t utc, float lat, float lon) {
+  time_t key = (utc / 900) * 900;
+  int idx = (int)(((unsigned long)key / 900) % MOON_ALT_CACHE_SIZE);
+  MoonAltCacheEntry &e = moonAltCache[idx];
+  if (e.valid && e.t == key &&
+      fabsf(e.lat - lat) < 0.001f && fabsf(e.lon - lon) < 0.001f) {
+    return e.alt;
+  }
+  float alt = moonAltitude(key, lat, lon);
+  e.t = key;
+  e.lat = lat;
+  e.lon = lon;
+  e.alt = alt;
+  e.valid = true;
+  return alt;
+}
 
 // ====================== Прогресс ======================
 void getMoonProgress(time_t now, float lat, float lon, float &progress, float &angle) {
@@ -921,20 +929,19 @@ void getMoonProgress(time_t now, float lat, float lon, float &progress, float &a
   time_t utc = now;
 
   const float HORIZON = -0.3f;
-  float currentAlt = moonAltitude(utc, lat, lon);
+  float currentAlt = moonAltitudeCached(utc, lat, lon);
   bool visible = (currentAlt >= HORIZON);
 
   // ----- Поиск предыдущего и следующего пересечения горизонта -----
-  const int step   = 300;          // 5 минут
-  const int window = 36 * 3600;    // ±36 часов
-
+  const int step = 900; // 15 минут
+  const int window = 36 * 3600; // ±36 часов
   time_t prevCross = 0;
   time_t nextCross = 0;
-  float  prevAlt   = moonAltitude(utc - window, lat, lon);
+  float prevAlt = moonAltitudeCached(utc - window, lat, lon);
 
   for (int i = 1; i <= (2 * window / step); i++) {
     time_t t = (utc - window) + (time_t)i * step;
-    float alt = moonAltitude(t, lat, lon);
+    float alt = moonAltitudeCached(t, lat, lon);
 
     if ((prevAlt < HORIZON && alt >= HORIZON) ||
         (prevAlt >= HORIZON && alt <  HORIZON)) {
@@ -984,20 +991,20 @@ void getMoonProgress(time_t now, float lat, float lon, float &progress, float &a
 // Находит ближайшее событие и возвращает строку
 String getNextMoonEventStr() {
   time_t utc = time(NULL);
-  float lat  = Latitude.toFloat();
-  float lon  = Longitude.toFloat();
+  float lat = Latitude.toFloat();
+  float lon = Longitude.toFloat();
 
   const float HORIZON = -0.3f;
-  const int step   = 300;          // 5 мин
-  const int window = 48 * 3600;    // ищем на 2 суток вперёд
+  const int step = 900; // 15 мин (было 5 мин)
+  const int window = 48 * 3600; // ищем на 2 суток вперёд
 
-  float prevAlt = moonAltitude(utc, lat, lon);
+  float prevAlt = moonAltitudeCached(utc, lat, lon);
   time_t nextEvent = 0;
-  bool   isRise    = false;
+  bool isRise = false;
 
   for (int i = 1; i <= (window / step); i++) {
     time_t t = utc + (time_t)i * step;
-    float alt = moonAltitude(t, lat, lon);
+    float alt = moonAltitudeCached(t, lat, lon);
 
     // Пересечение горизонта
     if ((prevAlt < HORIZON && alt >= HORIZON) ||
@@ -1024,7 +1031,7 @@ String getMoonAltitudeStr(bool allowInvisible) {
   time_t utc = time(NULL);
   float lat  = Latitude.toFloat();
   float lon  = Longitude.toFloat();
-  float alt  = moonAltitude(utc, lat, lon);
+  float alt  = moonAltitudeCached(utc, lat, lon);
 
   if (alt < -0.3f && !allowInvisible) return "";
 
