@@ -51,8 +51,8 @@ Changes made in this fork:
 
 ### September 2026
 
-* Fixed an issue where Weather Informer could occasionally wake up twice within the same hour — for example, at the 28th and 30th minute. This has now been fixed.
-* Significantly reduced the number of computations related to the Moon phase and position. This should help reduce battery consumption.
+* Fixed an issue where Weather Informer could occasionally wake up twice within the same period — for example, at the 28th and 30th minute. This has now been fixed.
+* Reduced the number of computations related to the Moon position. This should help reduce battery consumption.
 
 ### Changelog and Russian translate
 
